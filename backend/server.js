@@ -12,7 +12,7 @@ const { initializeSupabase } = require('./config/supabase');
 require('./config/passport'); // Initialize passport configuration
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());

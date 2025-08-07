@@ -8,7 +8,7 @@ const { getSupabase } = require('../config/supabase');
 const router = express.Router();
 
 // JWT secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Generate JWT token
 const generateToken = (user) => {
@@ -16,51 +16,58 @@ const generateToken = (user) => {
     { 
       id: user.id, 
       email: user.email,
-      name: user.name 
+      userType: user.user_type 
     },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
 };
 
-// Validation middleware
-const registerValidation = [
+// Middleware to verify JWT token
+const verifyToken = (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access denied. No token provided.'
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: 'Invalid token.'
+    });
+  }
+};
+
+// Register endpoint
+router.post('/register', [
   body('name')
     .trim()
-    .isLength({ min: 2 })
-    .withMessage('Name must be at least 2 characters long'),
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Name must be between 2 and 50 characters'),
   body('email')
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email'),
   body('password')
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .withMessage('Password must be at least 6 characters long'),
   body('confirmPassword')
     .custom((value, { req }) => {
       if (value !== req.body.password) {
-        throw new Error('Passwords do not match');
+        throw new Error('Password confirmation does not match password');
       }
       return true;
     })
-];
-
-const loginValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required')
-];
-
-// Register endpoint
-router.post('/register', registerValidation, async (req, res) => {
+], async (req, res) => {
   try {
-    // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -74,10 +81,10 @@ router.post('/register', registerValidation, async (req, res) => {
     const supabase = getSupabase();
 
     // Check if user already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('email')
-      .eq('email', email)
+      .eq('email', email.toLowerCase())
       .single();
 
     if (existingUser) {
@@ -106,7 +113,7 @@ router.post('/register', registerValidation, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Registration error:', error);
+      console.error('Database error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to create user account'
@@ -139,9 +146,16 @@ router.post('/register', registerValidation, async (req, res) => {
 });
 
 // Login endpoint
-router.post('/login', loginValidation, async (req, res) => {
+router.post('/login', [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+], async (req, res) => {
   try {
-    // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -154,10 +168,10 @@ router.post('/login', loginValidation, async (req, res) => {
     const { email, password } = req.body;
     const supabase = getSupabase();
 
-    // Find user
+    // Find user by email
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, full_name, email, password_hash, email_verified, user_type, created_at')
+      .select('id, full_name, email, password_hash, email_verified, user_type')
       .eq('email', email.toLowerCase())
       .single();
 
@@ -168,9 +182,9 @@ router.post('/login', loginValidation, async (req, res) => {
       });
     }
 
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -219,42 +233,15 @@ router.get('/google/callback',
   }
 );
 
-// Logout endpoint
-router.post('/logout', (req, res) => {
-  req.logout((err) => {
-    if (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Logout failed'
-      });
-    }
-    
-    res.json({
-      success: true,
-      message: 'Logged out successfully'
-    });
-  });
-});
-
 // Verify token endpoint
-router.get('/verify', async (req, res) => {
+router.get('/verify', verifyToken, async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'No token provided'
-      });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
     const supabase = getSupabase();
-
+    
     const { data: user, error } = await supabase
       .from('users')
       .select('id, full_name, email, email_verified, user_type')
-      .eq('id', decoded.id)
+      .eq('id', req.user.id)
       .single();
 
     if (error || !user) {
@@ -276,14 +263,15 @@ router.get('/verify', async (req, res) => {
     });
 
   } catch (error) {
-    res.status(401).json({
+    console.error('Token verification error:', error);
+    res.status(500).json({
       success: false,
-      message: 'Invalid token'
+      message: 'Internal server error'
     });
   }
 });
 
-// Forgot password endpoint
+// Forgot password endpoint (placeholder)
 router.post('/forgot-password', [
   body('email')
     .isEmail()
@@ -295,7 +283,8 @@ router.post('/forgot-password', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a valid email address'
+        message: 'Validation failed',
+        errors: errors.array()
       });
     }
 
@@ -303,20 +292,20 @@ router.post('/forgot-password', [
     const supabase = getSupabase();
 
     // Check if user exists
-    const { data: user } = await supabase
+    const { data: user, error } = await supabase
       .from('users')
-      .select('id, email')
+      .select('email')
       .eq('email', email.toLowerCase())
       .single();
 
     // Always return success for security (don't reveal if email exists)
     res.json({
       success: true,
-      message: 'If an account with that email exists, we have sent a password reset link.'
+      message: 'If an account with that email exists, a password reset link has been sent.'
     });
 
-    // Only send email if user actually exists
-    if (user) {
+    // Only send email if user exists
+    if (user && !error) {
       // TODO: Implement actual email sending logic here
       console.log(`Password reset requested for: ${email}`);
       // You can integrate with services like SendGrid, Nodemailer, etc.
