@@ -58,15 +58,6 @@ passport.use(new GoogleStrategy({
       // Update existing user with Google ID
       const updateData = { google_id: profile.id };
 
-      // Only add avatar_url if the column exists
-      try {
-        if (profile.photos && profile.photos[0]) {
-          updateData.avatar_url = profile.photos[0].value;
-        }
-      } catch (e) {
-        console.log('Avatar URL not supported, skipping...');
-      }
-
       const { data: updatedUser, error: updateError } = await supabase
         .from('users')
         .update(updateData)
@@ -86,31 +77,39 @@ passport.use(new GoogleStrategy({
       google_id: profile.id,
       email: profile.emails[0].value,
       full_name: profile.displayName || 'Google User',
+      password_hash: null, // Google OAuth users don't have passwords
       email_verified: true,
       user_type: 'user',
       created_at: new Date().toISOString()
     };
 
-    // Only add avatar_url if supported
-    try {
-      if (profile.photos && profile.photos[0]) {
-        newUserData.avatar_url = profile.photos[0].value;
-      }
-    } catch (e) {
-      console.log('Avatar URL not supported, skipping...');
-    }
-
-    const { data: newUser, error: createError } = await supabase
+    const { data: newUsers, error: createError } = await supabase
       .from('users')
       .insert(newUserData)
-      .select()
-      .single();
+      .select();
 
     if (createError) {
+      console.error('Error creating new Google user:', createError);
+      console.error('User data attempted:', newUserData);
       return done(createError, null);
     }
 
-    done(null, newUser);
+    if (newUsers && newUsers.length > 0) {
+      console.log('✅ Google user created successfully:', newUsers[0].email);
+
+      // Send welcome email for new Google user (don't wait for it)
+      try {
+        // const { sendWelcomeEmail } = require('../utils/emailService');
+        // sendWelcomeEmail(newUsers[0].email, newUsers[0].full_name);
+        console.log('📧 Welcome email would be sent to:', newUsers[0].email);
+      } catch (emailError) {
+        console.log('⚠️ Email service not available:', emailError.message);
+      }
+
+      return done(null, newUsers[0]);
+    }
+
+    return done(new Error('Failed to create user'), null);
   } catch (error) {
     done(error, null);
   }
