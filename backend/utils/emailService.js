@@ -329,9 +329,113 @@ const createWelcomeEmailTemplate = (userName, userEmail) => {
   `;
 };
 
+// Send OTP email for registration verification
+const sendOTPEmail = async (email, otp, userName = 'User') => {
+  try {
+    // Check if email is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('📧 Email not configured - OTP:', otp);
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: {
+        name: process.env.EMAIL_FROM_NAME || 'TravelEase',
+        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER
+      },
+      to: email,
+      subject: 'Email Verification - Your OTP Code | TravelEase',
+      html: createOTPEmailTemplate(otp, userName)
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log('✅ OTP email sent successfully:', info.messageId);
+    return {
+      success: true,
+      messageId: info.messageId,
+      message: 'OTP email sent successfully'
+    };
+
+  } catch (error) {
+    console.error('❌ Error sending OTP email:', error.message);
+    return {
+      success: false,
+      error: error.message,
+      message: 'Failed to send OTP email'
+    };
+  }
+};
+
+// Create OTP email template
+const createOTPEmailTemplate = (otp, userName) => {
+  const expiryMinutes = process.env.OTP_EXPIRY_MINUTES || 5;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Email Verification - TravelEase</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .otp-box { background: white; border: 2px solid #667eea; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+            .otp-code { font-size: 2.5em; font-weight: bold; color: #667eea; letter-spacing: 0.3em; margin: 10px 0; }
+            .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .logo { font-size: 1.5em; margin-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="logo">✈️ TravelEase</div>
+            <h1>Email Verification Required</h1>
+        </div>
+
+        <div class="content">
+            <p>Hello ${userName},</p>
+
+            <p>Welcome to TravelEase! To complete your registration and start exploring amazing destinations, please verify your email address using the OTP code below:</p>
+
+            <div class="otp-box">
+                <div class="otp-code">${otp}</div>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #666;">Enter this code to verify your email</p>
+            </div>
+
+            <div class="warning">
+                <strong>⏰ Important:</strong> This OTP will expire in ${expiryMinutes} minutes. Please use it as soon as possible.
+            </div>
+
+            <p><strong>Security Note:</strong> If you didn't request this verification, please ignore this email. Never share your OTP with anyone.</p>
+
+            <p>Once verified, you'll be able to:</p>
+            <ul>
+                <li>✈️ Book amazing travel destinations</li>
+                <li>🏨 Access exclusive hotel deals</li>
+                <li>🎫 Manage your bookings</li>
+                <li>💰 Get personalized travel recommendations</li>
+            </ul>
+
+            <p>Best regards,<br>The TravelEase Team</p>
+        </div>
+
+        <div class="footer">
+            <p>This email was sent automatically. Please do not reply to this email.</p>
+            <p>© 2024 TravelEase. All rights reserved.</p>
+        </div>
+    </body>
+    </html>
+  `;
+};
+
 module.exports = {
   sendPasswordResetEmail,
   sendWelcomeEmail,
+  sendOTPEmail,
   testEmailConfiguration,
   sendTestEmail
 };
