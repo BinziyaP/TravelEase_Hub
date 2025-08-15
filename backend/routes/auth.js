@@ -130,7 +130,10 @@ const signupHandler = async (req, res) => {
         full_name: name.trim(),
         password_hash: hashedPassword,
         otp_hash: otpHash,
-        otp_expires_at: expiresAt.toISOString()
+        otp_expires_at: expiresAt.toISOString(),
+        otp_attempts: 0,
+        max_attempts: parseInt(process.env.OTP_MAX_ATTEMPTS) || 5,
+        locked_until: null
       });
 
     if (insertError) {
@@ -280,6 +283,7 @@ router.post('/login', [
       success: true,
       message: 'Login successful',
       token,
+      redirectTo: '/dashboard',
       user: {
         id: user.id,
         name: user.full_name,
@@ -336,6 +340,44 @@ router.post('/verify-email', [
       });
     }
 
+    // Check if account is currently locked
+    if (pendingUser.locked_until) {
+      const lockTime = new Date(pendingUser.locked_until);
+      const now = new Date();
+      
+      if (now < lockTime) {
+        const minutesLeft = Math.ceil((lockTime - now) / (1000 * 60));
+        return res.status(423).json({
+          success: false,
+          message: `Account is temporarily locked due to too many failed attempts. Please try again in ${minutesLeft} minutes.`,
+          locked: true,
+          lockedUntil: lockTime.toISOString(),
+          minutesRemaining: minutesLeft
+        });
+      } else {
+        // Lock has expired, reset attempts
+        await supabase
+          .from('pending_users')
+          .update({ 
+            otp_attempts: 0,
+            locked_until: null 
+          })
+          .eq('email', email.toLowerCase());
+        
+        // Refresh user data
+        const { data: refreshedUser } = await supabase
+          .from('pending_users')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .single();
+        
+        if (refreshedUser) {
+          pendingUser.otp_attempts = refreshedUser.otp_attempts;
+          pendingUser.locked_until = refreshedUser.locked_until;
+        }
+      }
+    }
+
     // Check if OTP has expired
     if (isOTPExpired(pendingUser.otp_expires_at)) {
       // Clean up expired record
@@ -354,10 +396,47 @@ router.post('/verify-email', [
     // Verify OTP
     const isValidOTP = await verifyOTP(otp, pendingUser.otp_hash);
     if (!isValidOTP) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification code. Please check your email and try again.'
-      });
+      const newAttempts = (pendingUser.otp_attempts || 0) + 1;
+      const maxAttempts = pendingUser.max_attempts || parseInt(process.env.OTP_MAX_ATTEMPTS) || 5;
+      
+      // Check if max attempts reached
+      if (newAttempts >= maxAttempts) {
+        // Lock account for 15 minutes
+        const lockoutDuration = parseInt(process.env.OTP_LOCKOUT_DURATION_MINUTES) || 15;
+        const lockedUntil = new Date();
+        lockedUntil.setMinutes(lockedUntil.getMinutes() + lockoutDuration);
+        
+        await supabase
+          .from('pending_users')
+          .update({ 
+            otp_attempts: newAttempts,
+            locked_until: lockedUntil.toISOString()
+          })
+          .eq('email', email.toLowerCase());
+
+        return res.status(423).json({
+          success: false,
+          message: `Too many failed attempts. Your account has been temporarily locked for ${lockoutDuration} minutes for security.`,
+          locked: true,
+          lockedUntil: lockedUntil.toISOString(),
+          minutesRemaining: lockoutDuration
+        });
+      } else {
+        // Increment attempts
+        await supabase
+          .from('pending_users')
+          .update({ otp_attempts: newAttempts })
+          .eq('email', email.toLowerCase());
+
+        const remainingAttempts = maxAttempts - newAttempts;
+        return res.status(400).json({
+          success: false,
+          message: `Invalid verification code. You have ${remainingAttempts} attempts remaining.`,
+          remainingAttempts,
+          attemptsUsed: newAttempts,
+          maxAttempts
+        });
+      }
     }
 
     // Create user in users table with verified=true
@@ -388,12 +467,18 @@ router.post('/verify-email', [
       .delete()
       .eq('email', email.toLowerCase());
 
+    // Generate JWT token for immediate login
+    const token = generateToken(newUser);
+
     res.json({
       success: true,
-      message: 'Email verified successfully! You can now log in.',
+      message: 'Email verified successfully! Redirecting to dashboard...',
+      token,
+      redirectTo: '/dashboard',
       user: {
         id: newUser.id,
         email: newUser.email,
+        name: newUser.full_name,
         verified: newUser.verified,
         userType: newUser.user_type
       }
@@ -588,9 +673,23 @@ router.post('/forgot-password', [
 
     // Only send email if user exists
     if (user && !error) {
-      // TODO: Implement actual email sending logic here
-      console.log(`Password reset requested for: ${email}`);
-      // You can integrate with services like SendGrid, Nodemailer, etc.
+      try {
+        const { createPasswordResetToken } = require('../utils/passwordReset');
+        const { sendPasswordResetEmail } = require('../utils/emailService');
+        
+        // Create password reset token
+        const resetToken = await createPasswordResetToken(user.id);
+        
+        if (resetToken) {
+          // Send password reset email
+          await sendPasswordResetEmail(user.email, user.full_name, resetToken);
+          console.log(`✅ Password reset email sent to: ${email}`);
+        } else {
+          console.error('❌ Failed to create reset token for:', email);
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending password reset email:', emailError.message);
+      }
     }
 
   } catch (error) {
@@ -601,6 +700,183 @@ router.post('/forgot-password', [
     });
   }
 });
+
+// Verify password reset token
+router.post('/verify-reset-token', [
+  body('token')
+    .isLength({ min: 1 })
+    .withMessage('Reset token is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { token } = req.body;
+    const { verifyResetToken } = require('../utils/passwordReset');
+    
+    const result = await verifyResetToken(token);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Reset token is valid',
+      user: {
+        email: result.user.email,
+        name: result.user.full_name
+      }
+    });
+
+  } catch (error) {
+    console.error('Verify reset token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password', [
+  body('token')
+    .isLength({ min: 1 })
+    .withMessage('Reset token is required'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long'),
+  body('confirmPassword')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Password confirmation does not match password');
+      }
+      return true;
+    })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { token, password } = req.body;
+    const { verifyResetToken, markTokenAsUsed } = require('../utils/passwordReset');
+    
+    // Verify token
+    const result = await verifyResetToken(token);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+    // Hash new password
+    const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const supabase = getSupabase();
+
+    // Update password
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password_hash: hashedPassword })
+      .eq('id', result.userId);
+
+    if (updateError) {
+      console.error('Error updating password:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update password'
+      });
+    }
+
+    // Mark token as used
+    await markTokenAsUsed(result.tokenId);
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully! You can now log in with your new password.',
+      redirectTo: '/login'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// ============================================================================
+// GOOGLE OAUTH ROUTES
+// ============================================================================
+
+// Initiate Google OAuth
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email']
+}));
+
+// Google OAuth callback
+router.get('/google/callback', 
+  passport.authenticate('google', { 
+    failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
+    session: false 
+  }),
+  async (req, res) => {
+    try {
+      // Generate JWT token for the authenticated user
+      const token = generateToken(req.user);
+      
+      // Send registration success email for new users (if not already sent)
+      if (req.user.created_at) {
+        const createdTime = new Date(req.user.created_at);
+        const now = new Date();
+        const timeDiff = now - createdTime;
+        
+        // If user was created in the last 5 minutes, they're likely new
+        if (timeDiff < 5 * 60 * 1000) {
+          try {
+            const { sendRegistrationSuccessEmail } = require('../utils/emailService');
+            sendRegistrationSuccessEmail(req.user.email, req.user.full_name);
+          } catch (emailError) {
+            console.log('⚠️ Could not send registration success email:', emailError.message);
+          }
+        }
+      }
+
+      // Redirect to frontend with token
+      const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+        id: req.user.id,
+        name: req.user.full_name,
+        email: req.user.email,
+        emailVerified: true,
+        userType: req.user.user_type
+      }))}`;
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_processing_failed`);
+    }
+  }
+);
 
 // ============================================================================
 // OTP EMAIL VERIFICATION ROUTES

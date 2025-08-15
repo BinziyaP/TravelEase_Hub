@@ -97,11 +97,11 @@ passport.use(new GoogleStrategy({
     if (newUsers && newUsers.length > 0) {
       console.log('✅ Google user created successfully:', newUsers[0].email);
 
-      // Send welcome email for new Google user (don't wait for it)
+      // Send registration success email for new Google user (don't wait for it)
       try {
-        // const { sendWelcomeEmail } = require('../utils/emailService');
-        // sendWelcomeEmail(newUsers[0].email, newUsers[0].full_name);
-        console.log('📧 Welcome email would be sent to:', newUsers[0].email);
+        const { sendRegistrationSuccessEmail } = require('../utils/emailService');
+        sendRegistrationSuccessEmail(newUsers[0].email, newUsers[0].full_name);
+        console.log('✅ Registration success email sent to:', newUsers[0].email);
       } catch (emailError) {
         console.log('⚠️ Email service not available:', emailError.message);
       }

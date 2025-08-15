@@ -12,12 +12,16 @@ CREATE TABLE IF NOT EXISTS pending_users (
     password_hash TEXT NOT NULL,
     otp_hash TEXT NOT NULL,
     otp_expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    otp_attempts INTEGER DEFAULT 0,
+    max_attempts INTEGER DEFAULT 5,
+    locked_until TIMESTAMP WITH TIME ZONE NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_pending_users_email ON pending_users(email);
 CREATE INDEX IF NOT EXISTS idx_pending_users_expires_at ON pending_users(otp_expires_at);
+CREATE INDEX IF NOT EXISTS idx_pending_users_locked_until ON pending_users(locked_until);
 
 -- Ensure users table has verified column (modify existing table)
 DO $$ 

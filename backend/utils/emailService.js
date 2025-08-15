@@ -329,6 +329,102 @@ const createWelcomeEmailTemplate = (userName, userEmail) => {
   `;
 };
 
+// Send registration success email (for Google OAuth users)
+const sendRegistrationSuccessEmail = async (userEmail, userName) => {
+  try {
+    // Check if email is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('📧 Email not configured - Registration success email not sent');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: {
+        name: process.env.EMAIL_FROM_NAME || 'TravelEase',
+        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER
+      },
+      to: userEmail,
+      subject: 'Registration Successful',
+      html: createRegistrationSuccessEmailTemplate(userName, userEmail)
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Registration success email sent:', info.messageId);
+
+    return { success: true, messageId: info.messageId };
+
+  } catch (error) {
+    console.error('❌ Error sending registration success email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// Create HTML email template for registration success
+const createRegistrationSuccessEmailTemplate = (userName, userEmail) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Registration Successful - TravelEase</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 40px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 40px; border-radius: 0 0 10px 10px; }
+            .success-box { background: #d4edda; border: 2px solid #28a745; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+            .button { display: inline-block; background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+            .button:hover { background: #0056b3; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🎉 Welcome to TravelEase!</h1>
+            <p style="font-size: 18px; margin: 0;">Registration Successful</p>
+        </div>
+
+        <div class="content">
+            <div class="success-box">
+                <h2>✅ Account Created Successfully!</h2>
+                <p><strong>Hello ${userName || 'Traveler'}!</strong></p>
+                <p>You have successfully registered with TravelEase using your Google account.</p>
+            </div>
+
+            <p>Your account is now active and ready to use. You can start exploring our travel packages and book amazing destinations right away!</p>
+
+            <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="button">
+                    Go to Dashboard 🚀
+                </a>
+            </div>
+
+            <h3>🌟 What's Next?</h3>
+            <ul>
+                <li>🔍 Browse our curated travel packages</li>
+                <li>📅 Book your dream destination</li>
+                <li>👤 Complete your profile for personalized recommendations</li>
+                <li>💬 Connect with our travel experts</li>
+            </ul>
+
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 5px; margin: 30px 0;">
+                <h4>🔐 Your Account Security:</h4>
+                <p>Since you signed up with Google, your account is protected by Google's security. If you need any help, our support team is always ready to assist you.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Thank you for choosing TravelEase!</p>
+            <p>This email was sent to: ${userEmail}</p>
+            <p><small>© 2024 TravelEase. All rights reserved.</small></p>
+        </div>
+    </body>
+    </html>
+  `;
+};
+
 // Send OTP email for registration verification
 const sendOTPEmail = async (email, otp, userName = 'User') => {
   try {
@@ -346,7 +442,7 @@ const sendOTPEmail = async (email, otp, userName = 'User') => {
         address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER
       },
       to: email,
-      subject: 'Email Verification - Your OTP Code | TravelEase',
+      subject: 'Verify Your Account',
       html: createOTPEmailTemplate(otp, userName)
     };
 
@@ -398,27 +494,14 @@ const createOTPEmailTemplate = (otp, userName) => {
 
         <div class="content">
             <p>Hello ${userName},</p>
-
-            <p>Welcome to TravelEase! To complete your registration and start exploring amazing destinations, please verify your email address using the OTP code below:</p>
-
-            <div class="otp-box">
-                <div class="otp-code">${otp}</div>
-                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #666;">Enter this code to verify your email</p>
-            </div>
+            
+            <p>Your OTP is <strong>${otp}</strong>.</p>
 
             <div class="warning">
-                <strong>⏰ Important:</strong> This OTP will expire in ${expiryMinutes} minutes. Please use it as soon as possible.
+                <strong>⏰ Important:</strong> This OTP will expire in 5 minutes. Please use it as soon as possible.
             </div>
 
             <p><strong>Security Note:</strong> If you didn't request this verification, please ignore this email. Never share your OTP with anyone.</p>
-
-            <p>Once verified, you'll be able to:</p>
-            <ul>
-                <li>✈️ Book amazing travel destinations</li>
-                <li>🏨 Access exclusive hotel deals</li>
-                <li>🎫 Manage your bookings</li>
-                <li>💰 Get personalized travel recommendations</li>
-            </ul>
 
             <p>Best regards,<br>The TravelEase Team</p>
         </div>
@@ -436,6 +519,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendWelcomeEmail,
   sendOTPEmail,
+  sendRegistrationSuccessEmail,
   testEmailConfiguration,
   sendTestEmail
 };

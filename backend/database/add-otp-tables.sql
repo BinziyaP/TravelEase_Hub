@@ -8,13 +8,15 @@ CREATE TABLE IF NOT EXISTS email_verifications (
     otp_hash VARCHAR(255) NOT NULL, -- Hashed OTP for security
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     attempts INTEGER DEFAULT 0, -- Track verification attempts
-    max_attempts INTEGER DEFAULT 3, -- Maximum allowed attempts
+    max_attempts INTEGER DEFAULT 5, -- Maximum allowed attempts (5 failures = lockout)
+    locked_until TIMESTAMP WITH TIME ZONE NULL, -- Account lockout until this time
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_email_verifications_email ON email_verifications(email);
 CREATE INDEX IF NOT EXISTS idx_email_verifications_expires_at ON email_verifications(expires_at);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_locked_until ON email_verifications(locked_until);
 
 -- Update users table to ensure proper structure for OTP system
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
