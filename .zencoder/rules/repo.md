@@ -218,3 +218,19 @@ const userSchema = Joi.object({
 - Input validation
 - CORS protection
 - OTP verification for email
+- Registration verification before sign-in
+
+## Authentication Flow
+**Sign-in Process**:
+- Checks if user exists in the database before attempting sign-in
+- Prevents unregistered users from signing in
+- Shows a clear error message "This email is not registered in our system"
+- Displays a registration suggestion box with instructions and a "Go to Registration" button
+- Validates credentials against Supabase authentication
+
+**Registration Process**:
+- Validates full name (alphabetic characters only, proper capitalization)
+- Verifies email format and availability
+- Enforces password strength requirements
+- Creates user account in Supabase
+- Sends verification email for account activation

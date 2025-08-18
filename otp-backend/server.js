@@ -11,7 +11,7 @@ import { testEmailConfig } from './utils/email.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5001;
 
 // Security middleware
 app.use(helmet());
