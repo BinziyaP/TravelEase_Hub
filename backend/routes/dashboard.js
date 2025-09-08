@@ -251,6 +251,157 @@ router.get('/admin/packages', authenticateToken, requireAdmin, async (req, res) 
   }
 });
 
+// Test endpoint to verify API is working
+router.get('/public/test', (req, res) => {
+  res.json({ success: true, message: 'Public API is working!' });
+});
+
+// Test endpoint to check database connection and tables
+router.get('/public/db-test', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    
+    // Test packages table
+    const { data: packages, error: packagesError } = await supabase
+      .from('packages')
+      .select('count')
+      .limit(1);
+    
+    // Test agencies table
+    const { data: agencies, error: agenciesError } = await supabase
+      .from('agencies')
+      .select('count')
+      .limit(1);
+    
+    res.json({
+      success: true,
+      message: 'Database connection test',
+      packages: {
+        exists: !packagesError,
+        error: packagesError?.message || null
+      },
+      agencies: {
+        exists: !agenciesError,
+        error: agenciesError?.message || null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Database test failed',
+      error: error.message
+    });
+  }
+});
+
+// Public endpoint to fetch approved packages for destinations page
+router.get('/public/packages', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    
+    console.log('🔍 Fetching packages from database...');
+    
+    // First, let's try to get packages without agency data to see if the basic query works
+    const { data: packages, error } = await supabase
+      .from('packages')
+      .select(`
+        id,
+        name,
+        destination,
+        duration_days,
+        price,
+        max_travelers,
+        status,
+        created_at,
+        agency_id
+      `)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(6);
+
+    if (error) {
+      console.error('❌ Error fetching packages:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to fetch packages',
+        error: error.message 
+      });
+    }
+
+    console.log('✅ Packages fetched:', packages?.length || 0);
+
+    // Now let's get agency data separately to avoid join issues
+    let agencyData = {};
+    if (packages && packages.length > 0) {
+      const agencyIds = [...new Set(packages.map(pkg => pkg.agency_id))];
+      console.log('🔍 Fetching agency data for IDs:', agencyIds);
+      
+      const { data: agencies, error: agencyError } = await supabase
+        .from('agencies')
+        .select(`
+          id,
+          agency_name,
+          contact_person,
+          phone,
+          email
+        `)
+        .in('id', agencyIds);
+
+      if (agencyError) {
+        console.error('⚠️ Error fetching agencies:', agencyError);
+        // Continue without agency data
+      } else {
+        console.log('✅ Agencies fetched:', agencies?.length || 0);
+        // Create a lookup map
+        agencies?.forEach(agency => {
+          agencyData[agency.id] = {
+            agency_name: agency.agency_name || agency.name || 'Unknown Agency',
+            contact_person: agency.contact_person || 'Contact Person',
+            contact_email: agency.email || 'contact@agency.com',
+            contact_phone: agency.phone || 'N/A'
+          };
+        });
+      }
+    }
+
+    // Transform the data to match frontend expectations
+    const transformedPackages = packages?.map(pkg => {
+      const agency = agencyData[pkg.agency_id] || {
+        agency_name: 'Travel Agency',
+        contact_person: 'Contact Person',
+        contact_email: 'contact@agency.com',
+        contact_phone: 'N/A'
+      };
+
+      return {
+        id: pkg.id,
+        package_name: pkg.name,
+        destination: pkg.destination,
+        duration: pkg.duration_days,
+        price: pkg.price,
+        max_travelers: pkg.max_travelers,
+        status: pkg.status,
+        created_at: pkg.created_at,
+        description: `Explore ${pkg.destination} with this amazing ${pkg.duration_days}-day travel package. Perfect for up to ${pkg.max_travelers} travelers.`,
+        category: 'TRAVEL PACKAGE',
+        rating: 4.5, // Default rating since it's not in the schema
+        agencies: agency
+      };
+    }) || [];
+
+    console.log('✅ Transformed packages:', transformedPackages.length);
+
+    res.json({ success: true, packages: transformedPackages });
+  } catch (error) {
+    console.error('❌ Unexpected error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error',
+      error: error.message 
+    });
+  }
+});
+
 router.put('/admin/users/:userId/:action', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { userId, action } = req.params;

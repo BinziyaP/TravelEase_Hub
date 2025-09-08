@@ -661,7 +661,7 @@ router.post('/forgot-password', [
     // Check if user exists
     const { data: user, error } = await supabase
       .from('users')
-      .select('email')
+      .select('id, email, full_name')
       .eq('email', email.toLowerCase())
       .single();
 
@@ -701,7 +701,7 @@ router.post('/forgot-password', [
   }
 });
 
-// Verify password reset token
+// Verify password reset token (POST)
 router.post('/verify-reset-token', [
   body('token')
     .isLength({ min: 1 })
@@ -744,6 +744,35 @@ router.post('/verify-reset-token', [
       success: false,
       message: 'Internal server error'
     });
+  }
+});
+
+// Verify password reset token (GET for convenience)
+router.get('/verify-reset-token/:token', async (req, res) => {
+  try {
+    const token = req.params.token;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Reset token is required' });
+    }
+
+    const { verifyResetToken } = require('../utils/passwordReset');
+    const result = await verifyResetToken(token);
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.error });
+    }
+
+    res.json({
+      success: true,
+      message: 'Reset token is valid',
+      user: {
+        email: result.user.email,
+        name: result.user.full_name
+      }
+    });
+  } catch (error) {
+    console.error('Verify reset token (GET) error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
@@ -823,6 +852,58 @@ router.post('/reset-password', [
     });
   }
 });
+
+// Development-only: Get latest valid reset token for a user by email
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/get-reset-token', [
+    body('email')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Please provide a valid email')
+  ], async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
+      }
+
+      const { email } = req.body;
+      const supabase = getSupabase();
+
+      // Find user id
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (userError || !user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      const nowIso = new Date().toISOString();
+
+      // Get latest valid, unused token
+      const { data: tokens, error: tokenError } = await supabase
+        .from('password_reset_tokens')
+        .select('token, expires_at, used, created_at')
+        .eq('user_id', user.id)
+        .eq('used', false)
+        .gte('expires_at', nowIso)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (tokenError || !tokens || tokens.length === 0) {
+        return res.status(404).json({ success: false, message: 'No valid reset token found' });
+      }
+
+      res.json({ success: true, token: tokens[0].token, expires_at: tokens[0].expires_at });
+    } catch (error) {
+      console.error('Get reset token error:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  });
+}
 
 // ============================================================================
 // GOOGLE OAUTH ROUTES

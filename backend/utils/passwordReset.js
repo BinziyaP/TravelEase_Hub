@@ -12,7 +12,8 @@ const createPasswordResetToken = async (userId) => {
     const supabase = getSupabase();
     const token = generateResetToken();
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
+    // Token expires in 30 minutes
+    expiresAt.setMinutes(expiresAt.getMinutes() + 30);
 
     // Delete any existing tokens for this user
     await supabase
@@ -49,35 +50,45 @@ const verifyResetToken = async (token) => {
   try {
     const supabase = getSupabase();
 
-    // Find the token
-    const { data: tokenResults, error: tokenError } = await supabase
+    // Filter at DB level to avoid timezone parsing issues
+    const nowIso = new Date().toISOString();
+
+    // Find a valid, un-used token that hasn't expired
+    const { data: tokenRows, error: tokenError } = await supabase
       .from('password_reset_tokens')
-      .select('*, users(id, email, full_name)')
+      .select('id, user_id, expires_at, used')
       .eq('token', token)
-      .eq('used', false);
+      .eq('used', false)
+      .gte('expires_at', nowIso)
+      .limit(1);
 
     if (tokenError) {
       console.error('Error verifying reset token:', tokenError);
       return { success: false, error: 'Database error' };
     }
 
-    if (!tokenResults || tokenResults.length === 0) {
+    if (!tokenRows || tokenRows.length === 0) {
       return { success: false, error: 'Invalid or expired reset token' };
     }
 
-    const tokenData = tokenResults[0];
+    const tokenData = tokenRows[0];
 
-    // Check if token is expired
-    const now = new Date();
-    const expiresAt = new Date(tokenData.expires_at);
-    if (now > expiresAt) {
-      return { success: false, error: 'Reset token has expired' };
+    // Fetch user separately to avoid join issues
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id, email, full_name')
+      .eq('id', tokenData.user_id)
+      .single();
+
+    if (userError || !userRow) {
+      console.error('Error fetching user for reset token:', userError);
+      return { success: false, error: 'User not found for this token' };
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       userId: tokenData.user_id,
-      user: tokenData.users,
+      user: userRow,
       tokenId: tokenData.id
     };
 

@@ -106,7 +106,7 @@ const createPasswordResetEmailTemplate = (userName, resetUrl, resetToken) => {
             <div class="warning">
                 <strong>⚠️ Important:</strong>
                 <ul>
-                    <li>This link will expire in <strong>1 hour</strong></li>
+                    <li>This link will expire in <strong>30 minutes</strong></li>
                     <li>This link can only be used <strong>once</strong></li>
                     <li>If you didn't request this reset, please ignore this email</li>
                 </ul>
