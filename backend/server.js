@@ -8,11 +8,12 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
+const supabaseAuthRoutes = require('./routes/supabase-auth');
 const { initializeSupabase } = require('./config/supabase');
 require('./config/passport'); // Initialize passport configuration
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Security middleware
 app.use(helmet());
@@ -59,6 +60,7 @@ initializeSupabase();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api/supabase-auth', supabaseAuthRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
