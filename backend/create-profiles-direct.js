@@ -121,3 +121,4 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 }
 
 createProfilesTable();
+

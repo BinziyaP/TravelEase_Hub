@@ -79,3 +79,4 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- Display success message
 SELECT 'Profiles table created successfully!' AS status;
+
