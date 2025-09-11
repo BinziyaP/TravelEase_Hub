@@ -9,6 +9,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const supabaseAuthRoutes = require('./routes/supabase-auth');
+const geocodingRoutes = require('./routes/geocoding');
 const { initializeSupabase } = require('./config/supabase');
 require('./config/passport'); // Initialize passport configuration
 
@@ -61,6 +62,7 @@ initializeSupabase();
 app.use('/api/auth', authRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api/supabase-auth', supabaseAuthRoutes);
+app.use('/api', geocodingRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -78,6 +80,7 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
+      geocoding: '/api/geocode',
       health: '/health'
     }
   });
