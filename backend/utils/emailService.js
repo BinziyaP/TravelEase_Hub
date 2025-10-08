@@ -515,11 +515,307 @@ const createOTPEmailTemplate = (otp, userName) => {
   `;
 };
 
+// Send agency approval notification email
+const sendAgencyApprovalEmail = async (agencyEmail, agencyName, contactPerson) => {
+  try {
+    // Check if email is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('📧 Email not configured - Agency approval email not sent');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: {
+        name: process.env.EMAIL_FROM_NAME || 'TravelEase',
+        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER
+      },
+      to: agencyEmail,
+      subject: '🎉 Your Agency Application Has Been Approved!',
+      html: createAgencyApprovalEmailTemplate(agencyName, contactPerson)
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Agency approval email sent:', info.messageId);
+
+    return { success: true, messageId: info.messageId };
+
+  } catch (error) {
+    console.error('❌ Error sending agency approval email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send agency rejection notification email
+const sendAgencyRejectionEmail = async (agencyEmail, agencyName, contactPerson, rejectionReason = '') => {
+  try {
+    // Check if email is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('📧 Email not configured - Agency rejection email not sent');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: {
+        name: process.env.EMAIL_FROM_NAME || 'TravelEase',
+        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER
+      },
+      to: agencyEmail,
+      subject: 'Agency Application Update - TravelEase',
+      html: createAgencyRejectionEmailTemplate(agencyName, contactPerson, rejectionReason)
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Agency rejection email sent:', info.messageId);
+
+    return { success: true, messageId: info.messageId };
+
+  } catch (error) {
+    console.error('❌ Error sending agency rejection email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+// Send package status update email to agency
+const sendPackageStatusEmail = async (toEmail, agencyName, pkg, action, notes = '') => {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('📧 Email not configured - Package status email not sent');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const transporter = createTransporter();
+    const prettyAction = action.charAt(0).toUpperCase() + action.slice(1);
+    const subject = `Package ${prettyAction}: ${pkg.name}`;
+    const html = `
+      <h2>Package ${prettyAction}</h2>
+      <p>Hello ${agencyName || 'Agency'},</p>
+      <p>Your package <strong>${pkg.name}</strong> has been <strong>${action}</strong>.</p>
+      <ul>
+        <li>Destination: ${pkg.destination}</li>
+        <li>Duration: ${pkg.duration_days} days</li>
+        <li>Price: $${pkg.price}</li>
+        <li>Status: ${pkg.status}</li>
+      </ul>
+      ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
+      <p>Regards,<br/>TravelEase Admin</p>
+    `;
+
+    const mailOptions = {
+      from: {
+        name: process.env.EMAIL_FROM_NAME || 'TravelEase',
+        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER
+      },
+      to: toEmail,
+      subject,
+      html
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Package status email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error sending package status email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// Create HTML email template for agency approval
+const createAgencyApprovalEmailTemplate = (agencyName, contactPerson) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Agency Application Approved - TravelEase</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 40px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 40px; border-radius: 0 0 10px 10px; }
+            .success-box { background: #d4edda; border: 2px solid #28a745; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+            .feature-list { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .feature-item { display: flex; align-items: center; margin: 15px 0; }
+            .feature-icon { font-size: 24px; margin-right: 15px; }
+            .button { display: inline-block; background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+            .button:hover { background: #0056b3; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🎉 Congratulations!</h1>
+            <p style="font-size: 18px; margin: 0;">Your Agency Application Has Been Approved</p>
+        </div>
+
+        <div class="content">
+            <div class="success-box">
+                <h2>✅ Welcome to TravelEase Partner Network!</h2>
+                <p><strong>Hello ${contactPerson || 'Agency Representative'}!</strong></p>
+                <p>We're excited to inform you that <strong>${agencyName}</strong> has been approved to join the TravelEase platform as a verified travel agency partner.</p>
+            </div>
+
+            <h3>🚀 What you can do now:</h3>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <span class="feature-icon">🏢</span>
+                    <div>
+                        <strong>Access Your Agency Dashboard</strong><br>
+                        Manage your agency profile, packages, and bookings
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📦</span>
+                    <div>
+                        <strong>Create Travel Packages</strong><br>
+                        Add your amazing travel packages to our platform
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">👥</span>
+                    <div>
+                        <strong>Manage Bookings</strong><br>
+                        Handle customer bookings and provide excellent service
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <div>
+                        <strong>Track Performance</strong><br>
+                        Monitor your sales, reviews, and customer satisfaction
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="button">
+                    Access Your Dashboard 🚀
+                </a>
+            </div>
+
+            <div style="background: #e8f5e8; border: 1px solid #28a745; padding: 20px; border-radius: 5px; margin: 30px 0;">
+                <h4>🎯 Next Steps:</h4>
+                <ol>
+                    <li>Complete your agency profile setup</li>
+                    <li>Upload your travel packages</li>
+                    <li>Set up your payment preferences</li>
+                    <li>Start receiving bookings from travelers!</li>
+                </ol>
+            </div>
+
+            <h3>📞 Need Help Getting Started?</h3>
+            <p>Our partner support team is here to help you succeed:</p>
+            <ul>
+                <li>📧 Email: partners@travelease.com</li>
+                <li>💬 Live Chat: Available on your dashboard</li>
+                <li>📱 Phone: +1 (555) 123-PARTNER</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Welcome to the TravelEase family!</p>
+            <p><small>© 2024 TravelEase. All rights reserved.</small></p>
+        </div>
+    </body>
+    </html>
+  `;
+};
+
+// Create HTML email template for agency rejection
+const createAgencyRejectionEmailTemplate = (agencyName, contactPerson, rejectionReason) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Agency Application Update - TravelEase</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 40px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 40px; border-radius: 0 0 10px 10px; }
+            .info-box { background: #d1ecf1; border: 2px solid #17a2b8; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .reason-box { background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+            .button:hover { background: #0056b3; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Agency Application Update</h1>
+            <p style="font-size: 18px; margin: 0;">TravelEase Partner Program</p>
+        </div>
+
+        <div class="content">
+            <div class="info-box">
+                <h2>📋 Application Status Update</h2>
+                <p><strong>Hello ${contactPerson || 'Agency Representative'}!</strong></p>
+                <p>Thank you for your interest in joining the TravelEase partner network. After careful review of your application for <strong>${agencyName}</strong>, we regret to inform you that we cannot approve your agency at this time.</p>
+            </div>
+
+            ${rejectionReason ? `
+            <div class="reason-box">
+                <h4>📝 Reason for Decision:</h4>
+                <p>${rejectionReason}</p>
+            </div>
+            ` : ''}
+
+            <h3>🔄 What's Next?</h3>
+            <p>We encourage you to:</p>
+            <ul>
+                <li>Review and address any issues mentioned above</li>
+                <li>Ensure all required documentation is complete and valid</li>
+                <li>Consider reapplying in the future when requirements are met</li>
+                <li>Contact our support team for specific guidance</li>
+            </ul>
+
+            <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/agency-registration" class="button">
+                    Learn More About Requirements 📋
+                </a>
+            </div>
+
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 5px; margin: 30px 0;">
+                <h4>💡 Tips for Future Applications:</h4>
+                <ul>
+                    <li>Ensure all business licenses are current and valid</li>
+                    <li>Provide complete and accurate contact information</li>
+                    <li>Include detailed descriptions of your travel services</li>
+                    <li>Verify all documentation before submission</li>
+                </ul>
+            </div>
+
+            <h3>📞 Questions or Need Support?</h3>
+            <p>Our team is here to help you understand our requirements:</p>
+            <ul>
+                <li>📧 Email: partners@travelease.com</li>
+                <li>💬 Live Chat: Available on our website</li>
+                <li>📱 Phone: +1 (555) 123-PARTNER</li>
+            </ul>
+
+            <p>We appreciate your interest in TravelEase and look forward to potentially working with you in the future.</p>
+        </div>
+
+        <div class="footer">
+            <p>Thank you for your interest in TravelEase!</p>
+            <p><small>© 2024 TravelEase. All rights reserved.</small></p>
+        </div>
+    </body>
+    </html>
+  `;
+};
+
 module.exports = {
   sendPasswordResetEmail,
   sendWelcomeEmail,
   sendOTPEmail,
   sendRegistrationSuccessEmail,
+  sendAgencyApprovalEmail,
+  sendAgencyRejectionEmail,
+  sendPackageStatusEmail,
   testEmailConfiguration,
   sendTestEmail
 };

@@ -10,6 +10,13 @@ const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const supabaseAuthRoutes = require('./routes/supabase-auth');
 const geocodingRoutes = require('./routes/geocoding');
+const attractionsRoutes = require('./routes/attractions');
+const accurateSearchRoutes = require('./routes/search');
+const googlePlacesRoutes = require('./routes/places-search');
+const placesAutocompleteRoutes = require('./routes/places-autocomplete');
+const itineraryGeneratorRoutes = require('./routes/itinerary-generator');
+const hotelsRoutes = require('./routes/hotels');
+const restaurantsRoutes = require('./routes/restaurants');
 const { initializeSupabase } = require('./config/supabase');
 require('./config/passport'); // Initialize passport configuration
 
@@ -63,6 +70,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api/supabase-auth', supabaseAuthRoutes);
 app.use('/api', geocodingRoutes);
+app.use('/api/attractions', attractionsRoutes);
+app.use('/api/search', accurateSearchRoutes);
+app.use('/api/search/google', googlePlacesRoutes);
+app.use('/api/autocomplete/places', placesAutocompleteRoutes);
+app.use('/api/search/hotels', hotelsRoutes);
+app.use('/api/search/restaurants', restaurantsRoutes);
+app.use('/api/itinerary', itineraryGeneratorRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

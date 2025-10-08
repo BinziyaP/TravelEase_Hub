@@ -1,6 +1,7 @@
 const express = require('express');
 const { getSupabase } = require('../config/supabase');
 const jwt = require('jsonwebtoken');
+const { sendAgencyApprovalEmail, sendAgencyRejectionEmail } = require('../utils/emailService');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret';
@@ -228,6 +229,30 @@ router.get('/agency/bookings', authenticateToken, requireAgency, async (req, res
 });
 
 // Admin Dashboard Routes
+// Notify package status (approve/reject) - best-effort email
+router.post('/admin/notify-package-status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { packageId, action, notes } = req.body || {};
+    if (!packageId || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid payload' });
+    }
+
+    const supabase = getSupabase();
+    const { data: pkgRow, error: pkgErr } = await supabase.from('packages').select('*').eq('id', packageId).maybeSingle();
+    if (pkgErr || !pkgRow) return res.status(404).json({ success: false, message: 'Package not found' });
+
+    const { data: userData } = await supabase.auth.admin.getUserById(pkgRow.agency_id);
+    const toEmail = userData?.user?.email;
+    if (!toEmail) return res.json({ success: false, message: 'No email for agency', skipped: true });
+
+    const { sendPackageStatusEmail } = require('../utils/emailService');
+    await sendPackageStatusEmail(toEmail, 'Agency', pkgRow, action, notes);
+    res.json({ success: true });
+  } catch (e) {
+    console.warn('Notify package status failed:', e.message);
+    res.status(200).json({ success: false, message: 'Email send failed (non-blocking)' });
+  }
+});
 router.get('/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const supabase = getSupabase();
@@ -384,9 +409,11 @@ router.get('/public/packages', async (req, res) => {
     const supabase = getSupabase();
     
     console.log('🔍 Fetching packages from database...');
-    
+    const { term = '', maxPrice, maxDuration, limit = 12 } = req.query || {};
+    const searchTerm = String(term || '').trim();
+
     // First, let's try to get packages without agency data to see if the basic query works
-    const { data: packages, error } = await supabase
+    let query = supabase
       .from('packages')
       .select(`
         id,
@@ -399,9 +426,28 @@ router.get('/public/packages', async (req, res) => {
         created_at,
         agency_id
       `)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(6);
+      .eq('status', 'approved');
+
+    // Text search across multiple fields (name, destination)
+    if (searchTerm) {
+      query = query.or(
+        `name.ilike.%${searchTerm}%,destination.ilike.%${searchTerm}%`
+      );
+    }
+
+    // Numeric filters
+    if (maxPrice) {
+      const priceVal = Number(maxPrice);
+      if (!Number.isNaN(priceVal)) query = query.lte('price', priceVal);
+    }
+    if (maxDuration) {
+      const durVal = Number(maxDuration);
+      if (!Number.isNaN(durVal)) query = query.lte('duration_days', durVal);
+    }
+
+    query = query.order('created_at', { ascending: false }).limit(Number(limit) || 12);
+
+    const { data: packages, error } = await query;
 
     if (error) {
       console.error('❌ Error fetching packages:', error);
@@ -449,7 +495,7 @@ router.get('/public/packages', async (req, res) => {
     }
 
     // Transform the data to match frontend expectations
-    const transformedPackages = packages?.map(pkg => {
+    let transformedPackages = packages?.map(pkg => {
       const agency = agencyData[pkg.agency_id] || {
         agency_name: 'Travel Agency',
         contact_person: 'Contact Person',
@@ -472,6 +518,16 @@ router.get('/public/packages', async (req, res) => {
         agencies: agency
       };
     }) || [];
+
+    // Additional filter by agency name if term provided
+    if (searchTerm) {
+      const t = searchTerm.toLowerCase();
+      transformedPackages = transformedPackages.filter(p =>
+        p.package_name?.toLowerCase().includes(t) ||
+        p.destination?.toLowerCase().includes(t) ||
+        p.agencies?.agency_name?.toLowerCase().includes(t)
+      );
+    }
 
     console.log('✅ Transformed packages:', transformedPackages.length);
 
@@ -602,12 +658,31 @@ router.post('/admin/agencies/:agencyId/approve', authenticateToken, requireAdmin
       // Don't fail the request if history insertion fails, just log it
     }
 
-    // TODO: Send email notification to agency
-    // For now, we'll just return success
+    // Send email notification to agency
+    try {
+      // Get agency email from auth.users table
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(agency.user_id);
+      
+      if (!userError && userData.user?.email) {
+        const emailResult = await sendAgencyApprovalEmail(
+          userData.user.email,
+          agency.agency_name,
+          agency.contact_person
+        );
+        
+        console.log('📧 Agency approval email result:', emailResult);
+      } else {
+        console.error('❌ Could not fetch agency email for notification:', userError);
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending agency approval email:', emailError);
+      // Don't fail the approval if email fails
+    }
+
     res.json({ 
       success: true, 
       message: 'Agency approved successfully',
-      emailSent: false // TODO: Implement email notification
+      emailSent: true
     });
   } catch (error) {
     console.error('Error approving agency:', error);
@@ -670,12 +745,32 @@ router.post('/admin/agencies/:agencyId/reject', authenticateToken, requireAdmin,
       // Don't fail the request if history insertion fails, just log it
     }
 
-    // TODO: Send email notification to agency
-    // For now, we'll just return success
+    // Send email notification to agency
+    try {
+      // Get agency email from auth.users table
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(agency.user_id);
+      
+      if (!userError && userData.user?.email) {
+        const emailResult = await sendAgencyRejectionEmail(
+          userData.user.email,
+          agency.agency_name,
+          agency.contact_person,
+          notes || 'Please review your application and ensure all requirements are met.'
+        );
+        
+        console.log('📧 Agency rejection email result:', emailResult);
+      } else {
+        console.error('❌ Could not fetch agency email for notification:', userError);
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending agency rejection email:', emailError);
+      // Don't fail the rejection if email fails
+    }
+
     res.json({ 
       success: true, 
       message: 'Agency rejected successfully',
-      emailSent: false // TODO: Implement email notification
+      emailSent: true
     });
   } catch (error) {
     console.error('Error rejecting agency:', error);
@@ -703,7 +798,9 @@ router.get('/public/packages', async (req, res) => {
           agency_name,
           contact_person,
           city,
-          state
+          state,
+          phone,
+          email
         )
       `)
       .eq('status', 'approved')
@@ -724,14 +821,19 @@ router.get('/public/packages', async (req, res) => {
       id: pkg.id,
       package_name: pkg.name,
       destination: pkg.destination,
-      duration_days: pkg.duration_days,
+      duration: pkg.duration_days,
       price: pkg.price,
       max_travelers: pkg.max_travelers,
       created_at: pkg.created_at,
-      agency_name: pkg.agencies?.agency_name || 'Unknown Agency',
-      contact_person: pkg.agencies?.contact_person || 'Unknown',
-      city: pkg.agencies?.city || 'Unknown',
-      state: pkg.agencies?.state || 'Unknown',
+      // Build nested agencies object expected by Destinations.jsx
+      agencies: {
+        agency_name: pkg.agencies?.agency_name || 'Unknown Agency',
+        contact_person: pkg.agencies?.contact_person || 'Unknown',
+        contact_email: pkg.agencies?.email || 'contact@agency.com',
+        contact_phone: pkg.agencies?.phone || 'N/A',
+        city: pkg.agencies?.city || 'Unknown',
+        state: pkg.agencies?.state || 'Unknown'
+      },
       // Add some default values for frontend compatibility
       image: '/src/assets/beach.png', // Default image
       category: 'TRAVEL PACKAGE',
@@ -751,6 +853,93 @@ router.get('/public/packages', async (req, res) => {
       message: 'Internal server error',
       packages: [] 
     });
+  }
+});
+
+// Public endpoint to fetch a single package by ID with full details
+router.get('/public/packages/:id', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const pkgId = req.params.id;
+
+    // 1) Fetch the package row
+    const { data: pkg, error: pkgErr } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('id', pkgId)
+      .maybeSingle();
+
+    if (pkgErr) {
+      console.error('Error fetching package by id:', pkgErr);
+      return res.status(500).json({ success: false, message: 'Failed to fetch package' });
+    }
+
+    if (!pkg) {
+      return res.status(404).json({ success: false, message: 'Package not found' });
+    }
+
+    // 2) Fetch agency contact data safely (no reliance on PostgREST joins)
+    let agency = null;
+    if (pkg.agency_id) {
+      const { data: agencyRow, error: agencyErr } = await supabase
+        .from('agencies')
+        .select('id, agency_name, contact_person, city, state, phone, email')
+        .eq('id', pkg.agency_id)
+        .maybeSingle();
+
+      if (agencyErr) {
+        console.warn('Warning fetching agency for package details:', agencyErr.message);
+      }
+
+      agency = {
+        agency_name: agencyRow?.agency_name || 'Unknown Agency',
+        contact_person: agencyRow?.contact_person || 'Unknown',
+        contact_email: agencyRow?.email || 'contact@agency.com',
+        contact_phone: agencyRow?.phone || 'N/A',
+        city: agencyRow?.city || 'Unknown',
+        state: agencyRow?.state || 'Unknown'
+      };
+    }
+
+    // 3) Shape detailed response for frontend
+    const detailed = {
+      id: pkg.id,
+      package_name: pkg.name,
+      destination: pkg.destination,
+      duration: pkg.duration_days,
+      price: pkg.price,
+      max_travelers: pkg.max_travelers,
+      status: pkg.status,
+      created_at: pkg.created_at,
+      updated_at: pkg.updated_at,
+      approved_at: pkg.approved_at,
+      rejected_at: pkg.rejected_at,
+      admin_notes: pkg.admin_notes,
+      description: pkg.description || `Explore ${pkg.destination} with this amazing ${pkg.duration_days}-day travel package.`,
+      category: 'TRAVEL PACKAGE',
+      rating: 4.5,
+      image: pkg.image_url || '/src/assets/beach.png',
+      // Rich fields used by admin/UI components if present
+      accommodation_type: pkg.accommodation_type,
+      accommodation_name: pkg.accommodation_name,
+      accommodation_rating: pkg.accommodation_rating,
+      accommodation_location: pkg.accommodation_location,
+      selected_hotels: pkg.selected_hotels || [],
+      selected_restaurants: pkg.selected_restaurants || [],
+      transportation_included: pkg.transportation_included || [],
+      transportation_details: pkg.transportation_details || {},
+      attractions: pkg.attractions || [],
+      features: pkg.features || [],
+      // Itinerary support (both legacy 'itinerary' and newer 'daily_itinerary')
+      itinerary: Array.isArray(pkg.itinerary) ? pkg.itinerary : [],
+      daily_itinerary: Array.isArray(pkg.daily_itinerary) ? pkg.daily_itinerary : (Array.isArray(pkg.itinerary) ? pkg.itinerary : []),
+      agencies: agency
+    };
+
+    return res.json({ success: true, package: detailed });
+  } catch (error) {
+    console.error('Error in package details endpoint:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 

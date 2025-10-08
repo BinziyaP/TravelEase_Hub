@@ -1,0 +1,338 @@
+{
+  "thiruvananthapuram": {
+    "beaches": [
+      { "name": "Kovalam Lighthouse Beach", "id": "curated:kovalam_lighthouse", "coordinates": null },
+      { "name": "Kovalam Hawa Beach", "id": "curated:kovalam_hawa", "coordinates": null },
+      { "name": "Kovalam Samudra Beach", "id": "curated:kovalam_samudra", "coordinates": null },
+      { "name": "Varkala Beach (Papanasam)", "id": "curated:varkala_papanasam", "coordinates": null },
+      { "name": "Shankumugham Beach", "id": "curated:shankumugham", "coordinates": null },
+      { "name": "Poovar Estuary & Boat Trips", "id": "curated:poovar_estuary", "coordinates": null }
+    ],
+    "temples": [
+      { "name": "Sri Padmanabhaswamy Temple", "id": "curated:padmanabhaswamy" },
+      { "name": "Attukal Bhagavathy Temple", "id": "curated:attukal" },
+      { "name": "Sree Chitra Temple", "id": "curated:sree_chitra_temple" }
+    ],
+    "museums_heritage": [
+      { "name": "Napier Museum", "id": "curated:napier" },
+      { "name": "Sree Chitra Art Gallery", "id": "curated:sree_chitra_gallery" },
+      { "name": "Kanakakunnu Palace", "id": "curated:kanakakunnu" },
+      { "name": "Koyikkal Palace", "id": "curated:koyikkal" }
+    ],
+    "parks_sanctuaries": [
+      { "name": "Neyyar Wildlife Sanctuary", "id": "curated:neyyar" },
+      { "name": "Peppara Wildlife Sanctuary", "id": "curated:peppara" },
+      { "name": "Veli Tourist Village", "id": "curated:veli" }
+    ],
+    "malls": [
+      { "name": "Chalai Bazaar", "id": "curated:chalai" },
+      { "name": "MG Road", "id": "curated:mg_road_tvpm" }
+    ],
+    "other": [
+      { "name": "Vizhinjam Lighthouse & Port", "id": "curated:vizhinjam" },
+      { "name": "Ayurvedic Centres", "id": "curated:ayurveda" },
+      { "name": "Poovar Backwater Boat Rides", "id": "curated:poovar_boat" }
+    ]
+  },
+  "kollam": {
+    "backwaters_lakes_rivers": [
+      { "name": "Ashtamudi Lake", "id": "curated:ashtamudi" }
+    ],
+    "beaches": [
+      { "name": "Kollam Beach", "id": "curated:kollam_beach" },
+      { "name": "Thirumullavaram Beach", "id": "curated:thirumullavaram" }
+    ],
+    "waterfalls": [
+      { "name": "Palaruvi Falls", "id": "curated:palaruvi" }
+    ],
+    "parks_sanctuaries": [
+      { "name": "Thenmala Eco-Tourism", "id": "curated:thenmala" },
+      { "name": "Shendurney Wildlife Sanctuary", "id": "curated:shendurney" }
+    ],
+    "museums_heritage": [
+      { "name": "Jatayu Earth's Center", "id": "curated:jatayu" }
+    ],
+    "malls": [
+      { "name": "Quilon Local Markets", "id": "curated:quilon_markets" },
+      { "name": "Fisheries Area", "id": "curated:fisheries_area" }
+    ],
+    "other": [
+      { "name": "Boat Races", "id": "curated:boat_races" },
+      { "name": "Traditional Coir Villages", "id": "curated:coir_villages" }
+    ]
+  },
+  "pathanamthitta": {
+    "temples": [
+      { "name": "Sabarimala", "id": "curated:sabarimala" },
+      { "name": "Aranmula Parthasarathy Temple", "id": "curated:aranmula_temple" },
+      { "name": "Parumala Church", "id": "curated:parumala_church" }
+    ],
+    "waterfalls": [
+      { "name": "Perunthenaruvi Falls", "id": "curated:perunthenaruvi" }
+    ],
+    "backwaters_lakes_rivers": [
+      { "name": "Pampa River Scenic Stretches", "id": "curated:pampa" }
+    ],
+    "parks_sanctuaries": [
+      { "name": "Konni Elephant Training Centre", "id": "curated:konni" },
+      { "name": "Gavi Eco-Tourism", "id": "curated:gavi" }
+    ],
+    "other": [
+      { "name": "Aranmula Metal Mirror & Boat Festival", "id": "curated:aranmula_mirror_boat" }
+    ]
+  },
+  "alappuzha": {
+    "backwaters_lakes_rivers": [
+      { "name": "Vembanad Lake", "id": "curated:vembanad" },
+      { "name": "Alleppey Houseboats", "id": "curated:alleppey_houseboats" },
+      { "name": "Kuttanad Paddy & Canals", "id": "curated:kuttanad" }
+    ],
+    "beaches": [
+      { "name": "Alappuzha Beach", "id": "curated:alappuzha_beach" },
+      { "name": "Marari Beach", "id": "curated:marari" },
+      { "name": "Andhakaranazhi", "id": "curated:andhakaranazhi" }
+    ],
+    "other": [
+      { "name": "Pathiramanal Island", "id": "curated:pathiramanal" },
+      { "name": "Ambalapuzha Sri Krishna Temple", "id": "curated:ambalapuzha" },
+      { "name": "St. Mary's Forane Church (Champakulam)", "id": "curated:champakulam_church" },
+      { "name": "Nehru Trophy Boat Race", "id": "curated:nehru_trophy" }
+    ]
+  },
+  "kottayam": {
+    "hills_viewpoints": [
+      { "name": "Illikkal Kallu", "id": "curated:illikkal_kallu" },
+      { "name": "Ilaveezhapoonchira", "id": "curated:ilaveezhapoonchira" },
+      { "name": "Marmala Waterfalls", "id": "curated:marmala" }
+    ],
+    "backwaters_lakes_rivers": [
+      { "name": "Kumarakom Backwaters", "id": "curated:kumarakom_backwaters" },
+      { "name": "Vembanad Lake", "id": "curated:vembanad_kottayam" },
+      { "name": "Kumarakom Bird Sanctuary", "id": "curated:kumarakom_bird_sanctuary" }
+    ],
+    "temples": [
+      { "name": "Ettumanoor Mahadeva Temple", "id": "curated:ettumanoor" },
+      { "name": "Thirunakkara Mahadeva Temple", "id": "curated:thirunakkara" }
+    ],
+    "churches_mosques": [
+      { "name": "St. Mary's Orthodox Syrian Church (Cheriapally)", "id": "curated:cheriapally" },
+      { "name": "St. Alphonsa's Shrine (Bharananganam)", "id": "curated:alphonsa_shrine" }
+    ],
+    "museums_heritage": [
+      { "name": "Bay Island Driftwood Museum", "id": "curated:driftwood" }
+    ],
+    "malls_modern": [
+      { "name": "Lulu Mall Kottayam", "id": "curated:lulu_kottayam" }
+    ]
+  },
+  "idukki": {
+    "hills_viewpoints": [
+      { "name": "Munnar", "id": "curated:munnar" },
+      { "name": "Vagamon", "id": "curated:vagamon" },
+      { "name": "Kolukkumalai", "id": "curated:kolukkumalai" },
+      { "name": "Meesapulimala", "id": "curated:meesapulimala" },
+      { "name": "Kalvari Mount", "id": "curated:kalvari" }
+    ],
+    "waterfalls": [
+      { "name": "Anchuruli Tunnel", "id": "curated:anchuruli" },
+      { "name": "Thommankuthu", "id": "curated:thommankuthu" },
+      { "name": "Keezharkuthu", "id": "curated:keezharkuthu" }
+    ],
+    "parks_sanctuaries": [
+      { "name": "Eravikulam National Park", "id": "curated:eravikulam" },
+      { "name": "Periyar Wildlife Sanctuary / Thekkady", "id": "curated:periyar" },
+      { "name": "Chinnar Wildlife Sanctuary", "id": "curated:chinnar" }
+    ],
+    "other": [
+      { "name": "Idukki Arch Dam", "id": "curated:idukki_dam" },
+      { "name": "Mattupetty Dam", "id": "curated:mattupetty" }
+    ]
+  },
+  "ernakulam": {
+    "beaches": [
+      { "name": "Cherai Beach", "id": "curated:cherai" },
+      { "name": "Fort Kochi Beach", "id": "curated:fort_kochi_beach" },
+      { "name": "Munambam Beach", "id": "curated:munambam" }
+    ],
+    "museums_heritage": [
+      { "name": "Fort Kochi", "id": "curated:fort_kochi" },
+      { "name": "Mattancherry Palace (Dutch Palace)", "id": "curated:dutch_palace" },
+      { "name": "Jew Town & Paradesi Synagogue", "id": "curated:jew_town" },
+      { "name": "Bastion Bungalow", "id": "curated:bastion" },
+      { "name": "Hill Palace Museum", "id": "curated:hill_palace" },
+      { "name": "Kerala Folklore Museum", "id": "curated:folklore" },
+      { "name": "Indo-Portuguese Museum", "id": "curated:indo_portuguese" },
+      { "name": "Museum of Kerala History", "id": "curated:kerala_history" }
+    ],
+    "temples": [
+      { "name": "Chottanikkara Temple", "id": "curated:chottanikkara" },
+      { "name": "Ernakulathappan Temple", "id": "curated:ernakulathappan" }
+    ],
+    "churches_mosques": [
+      { "name": "St. Francis Church", "id": "curated:st_francis" },
+      { "name": "Santa Cruz Basilica", "id": "curated:santa_cruz" },
+      { "name": "Vallarpadam Basilica", "id": "curated:vallarpadam" }
+    ],
+    "parks_sanctuaries": [
+      { "name": "Marine Drive (Kochi)", "id": "curated:marine_drive" },
+      { "name": "Mangalavanam Bird Sanctuary", "id": "curated:mangalavanam" },
+      { "name": "Subhash Bose Park", "id": "curated:subhash_bose" }
+    ],
+    "malls_modern": [
+      { "name": "Lulu Mall (Kochi)", "id": "curated:lulu_kochi" },
+      { "name": "Oberon Mall", "id": "curated:oberon" },
+      { "name": "Forum Mall", "id": "curated:forum" },
+      { "name": "Centre Square Mall", "id": "curated:centre_square" },
+      { "name": "Abad Nucleus Mall", "id": "curated:abad_nucleus" }
+    ],
+    "other": [
+      { "name": "Bolgatty Palace & Island", "id": "curated:bolgatty" },
+      { "name": "Willingdon Island", "id": "curated:willingdon" },
+      { "name": "Kathakali & Cultural Shows", "id": "curated:kathakali" },
+      { "name": "Backwater Cruises (Ernakulam)", "id": "curated:backwater_cruises" }
+    ]
+  },
+  "thrissur": {
+    "temples": [
+      { "name": "Vadakkunnathan Temple", "id": "curated:vadakkunnathan" },
+      { "name": "Guruvayur", "id": "curated:guruvayur" }
+    ],
+    "waterfalls": [
+      { "name": "Athirappilly Falls", "id": "curated:athirappilly" },
+      { "name": "Vazhachal Falls", "id": "curated:vazhachal" },
+      { "name": "Charpa Falls", "id": "curated:charpa" }
+    ],
+    "museums_heritage": [
+      { "name": "Shakthan Thampuran Palace", "id": "curated:shakthan_palace" },
+      { "name": "Archaeological Museum", "id": "curated:archaeological_museum" },
+      { "name": "Thrissur Zoo", "id": "curated:thrissur_zoo" }
+    ],
+    "other": [
+      { "name": "Punnathur Kotta (Elephant Sanctuary)", "id": "curated:punnathur_kotta" },
+      { "name": "Thrissur Pooram", "id": "curated:thrissur_pooram" },
+      { "name": "Chettuva Backwaters", "id": "curated:chettuva" },
+      { "name": "Vilangan Kunnu", "id": "curated:vilangan_kunnu" },
+      { "name": "Cherpu (Wooden Elephants & Crafts)", "id": "curated:cherpu" }
+    ]
+  },
+  "palakkad": {
+    "museums_heritage": [
+      { "name": "Palakkad Fort", "id": "curated:palakkad_fort" },
+      { "name": "Kollengode Palace", "id": "curated:kollengode_palace" }
+    ],
+    "parks_sanctuaries": [
+      { "name": "Malampuzha Dam & Gardens", "id": "curated:malampuzha" },
+      { "name": "Silent Valley National Park", "id": "curated:silent_valley" },
+      { "name": "Parambikulam Tiger Reserve", "id": "curated:parambikulam" }
+    ],
+    "waterfalls": [
+      { "name": "Meenvallam Falls", "id": "curated:meenvallam" },
+      { "name": "Dhoni Falls", "id": "curated:dhoni" }
+    ],
+    "other": [
+      { "name": "Malampuzha Yakshi Sculpture", "id": "curated:malampuzha_yakshi" },
+      { "name": "Siruvani Reservoir", "id": "curated:siruvani" },
+      { "name": "Vadakkanthara Temple", "id": "curated:vadakkanthara" },
+      { "name": "Olappamanna Mana", "id": "curated:olappamanna" }
+    ]
+  },
+  "malappuram": {
+    "hills_viewpoints": [
+      { "name": "Kodikuthimala (Mini Ooty)", "id": "curated:kodikuthimala" },
+      { "name": "Arimbra (Mini Ooty)", "id": "curated:arimbra" }
+    ],
+    "waterfalls": [
+      { "name": "Adyanpara Falls", "id": "curated:adyanpara" },
+      { "name": "Keralamkundu Falls", "id": "curated:keralamkundu" }
+    ],
+    "museums_heritage": [
+      { "name": "Thunchan Parambu", "id": "curated:thunchan_parambu" },
+      { "name": "Nilambur Teak Museum", "id": "curated:nilambur_teak" }
+    ],
+    "other": [
+      { "name": "Kottakkunnu", "id": "curated:kottakkunnu" }
+    ]
+  },
+  "kozhikode": {
+    "beaches": [
+      { "name": "Kozhikode Beach (Mananchira)", "id": "curated:kozhikode_beach" },
+      { "name": "Beypore", "id": "curated:beypore" },
+      { "name": "Kappad (Vasco da Gama Landing)", "id": "curated:kappad" }
+    ],
+    "museums_heritage": [
+      { "name": "Pazhassi Raja Museum & Art Gallery", "id": "curated:pazhassi_museum" },
+      { "name": "Regional Science Centre / Planetarium", "id": "curated:science_centre" }
+    ],
+    "malls": [
+      { "name": "SM Street (Sweet Meat Street)", "id": "curated:sm_street" },
+      { "name": "Spice Markets", "id": "curated:spice_markets" }
+    ],
+    "other": [
+      { "name": "Mananchira Square", "id": "curated:mananchira_square" }
+    ]
+  },
+  "wayanad": {
+    "museums_heritage": [
+      { "name": "Edakkal Caves", "id": "curated:edakkal_caves" }
+    ],
+    "hills_viewpoints": [
+      { "name": "Chembra Peak", "id": "curated:chembra" },
+      { "name": "Lakkidi Viewpoint", "id": "curated:lakkidi" },
+      { "name": "Neelimala", "id": "curated:neelimala" }
+    ],
+    "waterfalls": [
+      { "name": "Soochipara Falls", "id": "curated:soochipara" },
+      { "name": "Meenmutty Falls", "id": "curated:meenmutty" },
+      { "name": "Kanthanpara Falls", "id": "curated:kanthanpara" }
+    ],
+    "parks_sanctuaries": [
+      { "name": "Wayanad Wildlife Sanctuary", "id": "curated:wayanad_sanctuary" }
+    ],
+    "other": [
+      { "name": "Banasura Sagar Dam", "id": "curated:banasura_dam" },
+      { "name": "Kuruva Island", "id": "curated:kuruva_island" },
+      { "name": "Pookode Lake", "id": "curated:pookode_lake" }
+    ]
+  },
+  "kannur": {
+    "beaches": [
+      { "name": "Payyambalam Beach", "id": "curated:payyambalam" },
+      { "name": "Muzhappilangad Drive-in Beach", "id": "curated:muzhappilangad" },
+      { "name": "Thottada Beach", "id": "curated:thottada" },
+      { "name": "Baby Beach", "id": "curated:baby_beach" }
+    ],
+    "museums_heritage": [
+      { "name": "St. Angelo Fort", "id": "curated:st_angelo_fort" },
+      { "name": "Arakkal Museum", "id": "curated:arakkal_museum" }
+    ],
+    "other": [
+      { "name": "Parassinikadavu Snake Park", "id": "curated:snake_park" },
+      { "name": "Muthappan Temple", "id": "curated:muthappan_temple" },
+      { "name": "Theyyam Performances", "id": "curated:theyyam" }
+    ]
+  },
+  "kasaragod": {
+    "museums_heritage": [
+      { "name": "Bekal Fort", "id": "curated:bekal_fort" },
+      { "name": "Chandragiri Fort", "id": "curated:chandragiri_fort" }
+    ],
+    "beaches": [
+      { "name": "Bekal Beach", "id": "curated:bekal_beach" },
+      { "name": "Kappil Beach", "id": "curated:kappil_beach" }
+    ],
+    "backwaters_lakes_rivers": [
+      { "name": "Valiyaparamba Backwaters", "id": "curated:valiyaparamba" }
+    ],
+    "temples": [
+      { "name": "Ananthapura Lake Temple", "id": "curated:ananthapura" },
+      { "name": "Madhur Temple", "id": "curated:madhur_temple" }
+    ],
+    "hills_viewpoints": [
+      { "name": "Ranipuram", "id": "curated:ranipuram" }
+    ],
+    "other": [
+      { "name": "Theyyam Performances", "id": "curated:theyyam_kasaragod" }
+    ]
+  }
+}
+

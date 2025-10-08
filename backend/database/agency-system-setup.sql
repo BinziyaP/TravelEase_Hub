@@ -1,208 +1,116 @@
 -- Agency Registration and Approval System Setup for TravelEase
 -- Run this SQL in your Supabase SQL Editor
 
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable UUIDs (either is fine; keep the one that works for you)
+create extension if not exists pgcrypto;
+create extension if not exists "uuid-ossp";
 
--- Create agencies table for agency registration and management
-CREATE TABLE IF NOT EXISTS public.agencies (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-    agency_name TEXT NOT NULL,
-    contact_person TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    city TEXT NOT NULL,
-    state TEXT NOT NULL,
-    address TEXT,
-    business_license_number TEXT NOT NULL UNIQUE,
-    description TEXT,
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-    admin_notes TEXT,
-    admin_id UUID REFERENCES auth.users(id),
-    approved_at TIMESTAMP WITH TIME ZONE,
-    rejected_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- Agencies table (matches your frontend fields)
+create table if not exists public.agencies (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade unique,
+  agency_name text not null,
+  contact_person text not null,
+  phone text not null,
+  city text not null,
+  state text not null,
+  address text,
+  business_license_number text not null unique,
+  description text,
+  status text default 'pending' check (status in ('pending','approved','rejected')),
+  admin_notes text,
+  admin_id uuid references auth.users(id),
+  approved_at timestamptz,
+  rejected_at timestamptz,
+  -- license verification fields used by AuthContext.jsx
+  license_verified boolean default false,
+  license_verification_status text default 'pending' check (license_verification_status in ('pending','verified','failed','error')),
+  license_verification_details jsonb,
+  license_verified_at timestamptz,
+  license_verification_error text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
--- Create agency_approval_history table for tracking approval/rejection history
-CREATE TABLE IF NOT EXISTS public.agency_approval_history (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    agency_id UUID REFERENCES public.agencies(id) ON DELETE CASCADE NOT NULL,
-    action TEXT NOT NULL CHECK (action IN ('approved', 'rejected', 'pending')),
-    admin_id UUID REFERENCES auth.users(id) NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Indexes
+create index if not exists idx_agencies_status on public.agencies(status);
+create index if not exists idx_agencies_user_id on public.agencies(user_id);
+create index if not exists idx_agencies_created_at on public.agencies(created_at);
+create index if not exists idx_agencies_business_license on public.agencies(business_license_number);
+create index if not exists idx_agencies_city_state on public.agencies(city, state);
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_agencies_status ON public.agencies(status);
-CREATE INDEX IF NOT EXISTS idx_agencies_user_id ON public.agencies(user_id);
-CREATE INDEX IF NOT EXISTS idx_agencies_created_at ON public.agencies(created_at);
-CREATE INDEX IF NOT EXISTS idx_agencies_business_license ON public.agencies(business_license_number);
-CREATE INDEX IF NOT EXISTS idx_agencies_city_state ON public.agencies(city, state);
+-- updated_at trigger
+create or replace function public.handle_agency_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
 
-CREATE INDEX IF NOT EXISTS idx_approval_history_agency_id ON public.agency_approval_history(agency_id);
-CREATE INDEX IF NOT EXISTS idx_approval_history_admin_id ON public.agency_approval_history(admin_id);
-CREATE INDEX IF NOT EXISTS idx_approval_history_created_at ON public.agency_approval_history(created_at);
+drop trigger if exists handle_agencies_updated_at on public.agencies;
+create trigger handle_agencies_updated_at
+  before update on public.agencies
+  for each row execute function public.handle_agency_updated_at();
 
--- Set up Row Level Security (RLS)
-ALTER TABLE public.agencies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.agency_approval_history ENABLE ROW LEVEL SECURITY;
+-- RLS (policies for users and admins)
+alter table public.agencies enable row level security;
 
--- Agency policies - agencies can view and update their own profile
-CREATE POLICY "Agencies can view own profile" ON public.agencies
-    FOR SELECT USING (auth.uid() = user_id);
+-- Clean up any old policies
+do $$
+begin
+  if exists (select 1 from pg_policies where schemaname='public' and tablename='agencies') then
+    drop policy if exists "agencies_self_select" on public.agencies;
+    drop policy if exists "agencies_self_insert" on public.agencies;
+    drop policy if exists "agencies_self_update" on public.agencies;
+    drop policy if exists "agencies_admin_select" on public.agencies;
+    drop policy if exists "agencies_admin_update" on public.agencies;
+  end if;
+end$$;
 
-CREATE POLICY "Agencies can update own profile" ON public.agencies
-    FOR UPDATE USING (auth.uid() = user_id);
+-- Authenticated user manages their own row
+create policy "agencies_self_insert" on public.agencies
+for insert to authenticated
+with check (user_id = auth.uid());
 
-CREATE POLICY "Agencies can insert own profile" ON public.agencies
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+create policy "agencies_self_select" on public.agencies
+for select to authenticated
+using (user_id = auth.uid());
 
--- Admin policies - admins can view and manage all agencies
--- Note: This assumes you have admin users. You can modify this policy based on your admin identification method
-CREATE POLICY "Admins can view all agencies" ON public.agencies
-    FOR SELECT USING (true); -- Temporarily allow all authenticated users to view
+create policy "agencies_self_update" on public.agencies
+for update to authenticated
+using (user_id = auth.uid());
 
-CREATE POLICY "Admins can update all agencies" ON public.agencies
-    FOR UPDATE USING (true); -- Temporarily allow all authenticated users to update
+-- Admins (JWT app_metadata.user_type = 'admin') can view/update all
+create policy "agencies_admin_select" on public.agencies
+for select to authenticated
+using ((auth.jwt()->'app_metadata'->>'user_type') = 'admin');
 
--- Approval history policies
-CREATE POLICY "Agencies can view own approval history" ON public.agency_approval_history
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.agencies 
-            WHERE id = agency_id AND user_id = auth.uid()
-        )
-    );
+create policy "agencies_admin_update" on public.agencies
+for update to authenticated
+using ((auth.jwt()->'app_metadata'->>'user_type') = 'admin');
 
-CREATE POLICY "Admins can view all approval history" ON public.agency_approval_history
-    FOR SELECT USING (true); -- Temporarily allow all authenticated users to view
+-- RPC used by admin dashboards
+create or replace function public.get_agency_stats()
+returns json
+language plpgsql
+security definer
+as $$
+declare
+  result json;
+begin
+  select json_build_object(
+    'total', count(*),
+    'pending', count(*) filter (where status = 'pending'),
+    'approved', count(*) filter (where status = 'approved'),
+    'rejected', count(*) filter (where status = 'rejected')
+  ) into result
+  from public.agencies;
 
-CREATE POLICY "Admins can insert approval history" ON public.agency_approval_history
-    FOR INSERT WITH CHECK (true); -- Temporarily allow all authenticated users to insert
+  return result;
+end;
+$$;
 
--- Function to handle agency approval
-CREATE OR REPLACE FUNCTION public.approve_agency(
-    agency_uuid UUID,
-    admin_uuid UUID,
-    approval_notes TEXT DEFAULT NULL
-)
-RETURNS JSON AS $$
-DECLARE
-    agency_record RECORD;
-    result JSON;
-BEGIN
-    -- Get agency details
-    SELECT * INTO agency_record FROM public.agencies WHERE id = agency_uuid;
-    
-    IF NOT FOUND THEN
-        RETURN json_build_object('success', false, 'message', 'Agency not found');
-    END IF;
-    
-    -- Update agency status
-    UPDATE public.agencies 
-    SET 
-        status = 'approved',
-        admin_notes = COALESCE(approval_notes, admin_notes),
-        admin_id = admin_uuid,
-        approved_at = NOW(),
-        updated_at = NOW()
-    WHERE id = agency_uuid;
-    
-    -- Insert approval history
-    INSERT INTO public.agency_approval_history (agency_id, action, admin_id, notes)
-    VALUES (agency_uuid, 'approved', admin_uuid, approval_notes);
-    
-    RETURN json_build_object(
-        'success', true, 
-        'message', 'Agency approved successfully',
-        'agency_id', agency_uuid
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to handle agency rejection
-CREATE OR REPLACE FUNCTION public.reject_agency(
-    agency_uuid UUID,
-    admin_uuid UUID,
-    rejection_notes TEXT DEFAULT NULL
-)
-RETURNS JSON AS $$
-DECLARE
-    agency_record RECORD;
-    result JSON;
-BEGIN
-    -- Get agency details
-    SELECT * INTO agency_record FROM public.agencies WHERE id = agency_uuid;
-    
-    IF NOT FOUND THEN
-        RETURN json_build_object('success', false, 'message', 'Agency not found');
-    END IF;
-    
-    -- Update agency status
-    UPDATE public.agencies 
-    SET 
-        status = 'rejected',
-        admin_notes = COALESCE(rejection_notes, admin_notes),
-        admin_id = admin_uuid,
-        rejected_at = NOW(),
-        updated_at = NOW()
-    WHERE id = agency_uuid;
-    
-    -- Insert approval history
-    INSERT INTO public.agency_approval_history (agency_id, action, admin_id, notes)
-    VALUES (agency_uuid, 'rejected', admin_uuid, rejection_notes);
-    
-    RETURN json_build_object(
-        'success', true, 
-        'message', 'Agency rejected successfully',
-        'agency_id', agency_uuid
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to get agency statistics for admin dashboard
-CREATE OR REPLACE FUNCTION public.get_agency_stats()
-RETURNS JSON AS $$
-DECLARE
-    result JSON;
-BEGIN
-    SELECT json_build_object(
-        'total', COUNT(*),
-        'pending', COUNT(*) FILTER (WHERE status = 'pending'),
-        'approved', COUNT(*) FILTER (WHERE status = 'approved'),
-        'rejected', COUNT(*) FILTER (WHERE status = 'rejected')
-    ) INTO result
-    FROM public.agencies;
-    
-    RETURN result;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION public.handle_agency_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Triggers for updated_at
-CREATE TRIGGER handle_agencies_updated_at
-    BEFORE UPDATE ON public.agencies
-    FOR EACH ROW EXECUTE FUNCTION public.handle_agency_updated_at();
-
--- Grant necessary permissions
-GRANT USAGE ON SCHEMA public TO anon, authenticated;
-GRANT ALL ON public.agencies TO anon, authenticated;
-GRANT ALL ON public.agency_approval_history TO anon, authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.approve_agency(UUID, UUID, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.reject_agency(UUID, UUID, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_agency_stats() TO authenticated;
-
--- Display success message
-SELECT 'Agency system setup completed successfully!' AS status;
+grant usage on schema public to anon, authenticated;
+grant select, insert, update on public.agencies to authenticated;
+grant execute on function public.get_agency_stats() to authenticated;
