@@ -22,6 +22,7 @@ const googlePlacesRoutes = require('./routes/places-search');
 const placesAutocompleteRoutes = require('./routes/places-autocomplete');
 const itineraryGeneratorRoutes = require('./routes/itinerary-generator');
 const restaurantsRoutes = require('./routes/restaurants');
+const bookingRoutes = require('./routes/booking');
 const { initializeSupabase } = require('./config/supabase');
 require('./config/passport'); // Initialize passport configuration
 
@@ -81,6 +82,7 @@ app.use('/api/search/google', googlePlacesRoutes);
 app.use('/api/autocomplete/places', placesAutocompleteRoutes);
 app.use('/api/search/restaurants', restaurantsRoutes);
 app.use('/api/itinerary', itineraryGeneratorRoutes);
+app.use('/api/booking', bookingRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

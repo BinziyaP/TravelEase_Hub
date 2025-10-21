@@ -420,7 +420,9 @@ router.get('/public/packages', async (req, res) => {
         created_at,
         agency_id,
         route_coordinates,
-        selected_places
+        selected_places,
+        total_distance_km,
+        estimated_travel_time_hours
       `)
       .eq('status', 'approved');
 
@@ -513,7 +515,9 @@ router.get('/public/packages', async (req, res) => {
         rating: 4.5, // Default rating since it's not in the schema
         agencies: agency,
         route_coordinates: pkg.route_coordinates || [],
-        selected_places: pkg.selected_places || []
+        selected_places: pkg.selected_places || [],
+        total_distance_km: pkg.total_distance_km || 0,
+        estimated_travel_time_hours: pkg.estimated_travel_time_hours || 0
       };
     }) || [];
 
@@ -881,6 +885,11 @@ router.get('/public/packages/:id', async (req, res) => {
       // Itinerary support (both legacy 'itinerary' and newer 'daily_itinerary')
       itinerary: Array.isArray(pkg.itinerary) ? pkg.itinerary : [],
       daily_itinerary: Array.isArray(pkg.daily_itinerary) ? pkg.daily_itinerary : (Array.isArray(pkg.itinerary) ? pkg.itinerary : []),
+      // Route and location data for maps
+      route_coordinates: pkg.route_coordinates || [],
+      selected_places: pkg.selected_places || [],
+      total_distance_km: pkg.total_distance_km || 0,
+      estimated_travel_time_hours: pkg.estimated_travel_time_hours || 0,
       agencies: agency
     };
 
