@@ -25,53 +25,47 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Invalid or expired token' });
     }
 
-    // Get user profile to check user type
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_type')
-      .eq('id', user.id)
-      .single();
+    // Determine user type: prefer Supabase app/user metadata, then fallback to profiles table
+    // 1) From Supabase Auth metadata (set during signup): allows admins without relying on profiles
+    let userType = user?.user_metadata?.user_type || user?.app_metadata?.user_type || null;
 
-    // If profile doesn't exist, create a default one or handle gracefully
-    let userType = 'user'; // Default user type
-    
-    if (profileError) {
-      console.error('Profile fetch error:', profileError);
-      
-      // If it's a "not found" error, try to create a default profile
-      if (profileError.code === 'PGRST116' || profileError.message?.includes('No rows found')) {
-        console.log('Creating default profile for user:', user.id);
-        
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            user_type: 'user'
-          })
-          .select('user_type')
-          .single();
-          
-        if (createError) {
-          console.error('Error creating profile:', createError);
-          // Continue with default user type
-        } else {
-          userType = newProfile?.user_type || 'user';
-        }
+    // 2) Fallback to profiles table if not present in metadata
+    if (!userType) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single();
+
+      if (profile && !profileError) {
+        userType = profile.user_type || 'user';
       } else {
-        // For other errors, just use default user type
-        console.error('Profile fetch failed, using default user type');
+        // 3) If profile missing, create one seeded from metadata when possible
+        const seedUserType = user?.user_metadata?.user_type || 'user';
+        try {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+              user_type: seedUserType
+            })
+            .select('user_type')
+            .single();
+          userType = newProfile?.user_type || seedUserType;
+        } catch (e) {
+          console.warn('Profile create skipped:', e.message);
+          userType = seedUserType;
+        }
       }
-    } else {
-      userType = profile?.user_type || 'user';
     }
 
     // Attach user with profile info to request
     req.user = {
       id: user.id,
       email: user.email,
-      userType: userType
+      userType: userType || 'user'
     };
     
     next();
@@ -424,7 +418,9 @@ router.get('/public/packages', async (req, res) => {
         max_travelers,
         status,
         created_at,
-        agency_id
+        agency_id,
+        route_coordinates,
+        selected_places
       `)
       .eq('status', 'approved');
 
@@ -515,7 +511,9 @@ router.get('/public/packages', async (req, res) => {
         description: `Explore ${pkg.destination} with this amazing ${pkg.duration_days}-day travel package. Perfect for up to ${pkg.max_travelers} travelers.`,
         category: 'TRAVEL PACKAGE',
         rating: 4.5, // Default rating since it's not in the schema
-        agencies: agency
+        agencies: agency,
+        route_coordinates: pkg.route_coordinates || [],
+        selected_places: pkg.selected_places || []
       };
     }) || [];
 
@@ -658,31 +656,47 @@ router.post('/admin/agencies/:agencyId/approve', authenticateToken, requireAdmin
       // Don't fail the request if history insertion fails, just log it
     }
 
-    // Send email notification to agency
+    // Update Supabase auth app_metadata and send email (best-effort)
+    let emailSent = false;
     try {
-      // Get agency email from auth.users table
+      // Get agency user
       const { data: userData, error: userError } = await supabase.auth.admin.getUserById(agency.user_id);
-      
-      if (!userError && userData.user?.email) {
-        const emailResult = await sendAgencyApprovalEmail(
-          userData.user.email,
-          agency.agency_name,
-          agency.contact_person
-        );
-        
-        console.log('📧 Agency approval email result:', emailResult);
+      if (!userError && userData?.user) {
+        // 1) Update app_metadata to reflect agency status
+        const existingMeta = userData.user.app_metadata || {};
+        await supabase.auth.admin.updateUserById(agency.user_id, {
+          app_metadata: { ...existingMeta, user_type: 'agency', agency_status: 'approved' }
+        });
+
+        // 2) Sync profiles.user_type if profile exists
+        try {
+          await supabase
+            .from('profiles')
+            .update({ user_type: 'agency', updated_at: new Date().toISOString() })
+            .eq('id', agency.user_id);
+        } catch (_e) {}
+
+        // 3) Send email
+        if (userData.user.email) {
+          const emailResult = await sendAgencyApprovalEmail(
+            userData.user.email,
+            agency.agency_name,
+            agency.contact_person
+          );
+          emailSent = !!emailResult?.success;
+          console.log('📧 Agency approval email result:', emailResult);
+        }
       } else {
-        console.error('❌ Could not fetch agency email for notification:', userError);
+        console.error('❌ Could not fetch agency user for notification:', userError);
       }
     } catch (emailError) {
-      console.error('❌ Error sending agency approval email:', emailError);
-      // Don't fail the approval if email fails
+      console.error('❌ Error during approval side-effects (metadata/email):', emailError);
     }
 
     res.json({ 
       success: true, 
       message: 'Agency approved successfully',
-      emailSent: true
+      emailSent
     });
   } catch (error) {
     console.error('Error approving agency:', error);
@@ -745,32 +759,40 @@ router.post('/admin/agencies/:agencyId/reject', authenticateToken, requireAdmin,
       // Don't fail the request if history insertion fails, just log it
     }
 
-    // Send email notification to agency
+    // Update Supabase auth app_metadata and send email (best-effort)
+    let emailSent = false;
     try {
-      // Get agency email from auth.users table
+      // Get agency user
       const { data: userData, error: userError } = await supabase.auth.admin.getUserById(agency.user_id);
-      
-      if (!userError && userData.user?.email) {
-        const emailResult = await sendAgencyRejectionEmail(
-          userData.user.email,
-          agency.agency_name,
-          agency.contact_person,
-          notes || 'Please review your application and ensure all requirements are met.'
-        );
-        
-        console.log('📧 Agency rejection email result:', emailResult);
+      if (!userError && userData?.user) {
+        // 1) Update app_metadata to reflect agency status
+        const existingMeta = userData.user.app_metadata || {};
+        await supabase.auth.admin.updateUserById(agency.user_id, {
+          app_metadata: { ...existingMeta, user_type: 'agency', agency_status: 'rejected' }
+        });
+
+        // 2) Send email
+        if (userData.user.email) {
+          const emailResult = await sendAgencyRejectionEmail(
+            userData.user.email,
+            agency.agency_name,
+            agency.contact_person,
+            notes || 'Please review your application and ensure all requirements are met.'
+          );
+          emailSent = !!emailResult?.success;
+          console.log('📧 Agency rejection email result:', emailResult);
+        }
       } else {
-        console.error('❌ Could not fetch agency email for notification:', userError);
+        console.error('❌ Could not fetch agency user for notification:', userError);
       }
     } catch (emailError) {
-      console.error('❌ Error sending agency rejection email:', emailError);
-      // Don't fail the rejection if email fails
+      console.error('❌ Error during rejection side-effects (metadata/email):', emailError);
     }
 
     res.json({ 
       success: true, 
       message: 'Agency rejected successfully',
-      emailSent: true
+      emailSent
     });
   } catch (error) {
     console.error('Error rejecting agency:', error);
@@ -779,82 +801,8 @@ router.post('/admin/agencies/:agencyId/reject', authenticateToken, requireAdmin,
 });
 
 // Public endpoint to fetch approved packages (no authentication required)
-router.get('/public/packages', async (req, res) => {
-  try {
-    const supabase = getSupabase();
-    
-    // Get approved packages with agency information
-    const { data: packages, error } = await supabase
-      .from('packages')
-      .select(`
-        id,
-        name,
-        destination,
-        duration_days,
-        price,
-        max_travelers,
-        created_at,
-        agencies (
-          agency_name,
-          contact_person,
-          city,
-          state,
-          phone,
-          email
-        )
-      `)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(12); // Limit to 12 packages for performance
-
-    if (error) {
-      console.error('Error fetching public packages:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch packages',
-        packages: [] 
-      });
-    }
-
-    // Transform the data to match frontend expectations
-    const transformedPackages = packages.map(pkg => ({
-      id: pkg.id,
-      package_name: pkg.name,
-      destination: pkg.destination,
-      duration: pkg.duration_days,
-      price: pkg.price,
-      max_travelers: pkg.max_travelers,
-      created_at: pkg.created_at,
-      // Build nested agencies object expected by Destinations.jsx
-      agencies: {
-        agency_name: pkg.agencies?.agency_name || 'Unknown Agency',
-        contact_person: pkg.agencies?.contact_person || 'Unknown',
-        contact_email: pkg.agencies?.email || 'contact@agency.com',
-        contact_phone: pkg.agencies?.phone || 'N/A',
-        city: pkg.agencies?.city || 'Unknown',
-        state: pkg.agencies?.state || 'Unknown'
-      },
-      // Add some default values for frontend compatibility
-      image: '/src/assets/beach.png', // Default image
-      category: 'TRAVEL PACKAGE',
-      rating: 4.5,
-      description: `Explore ${pkg.destination} with this amazing ${pkg.duration_days}-day travel package. Perfect for up to ${pkg.max_travelers} travelers.`
-    }));
-
-    res.json({ 
-      success: true, 
-      packages: transformedPackages,
-      count: transformedPackages.length
-    });
-  } catch (error) {
-    console.error('Error in public packages endpoint:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error',
-      packages: [] 
-    });
-  }
-});
+// (Removed duplicate '/public/packages' route that relied on implicit Supabase joins.
+// The robust implementation above fetches agencies separately to avoid FK/join issues.)
 
 // Public endpoint to fetch a single package by ID with full details
 router.get('/public/packages/:id', async (req, res) => {

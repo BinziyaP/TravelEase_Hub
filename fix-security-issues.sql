@@ -205,3 +205,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 COMMENT ON TABLE public.agencies IS 'Agencies table with Row Level Security enabled';
 COMMENT ON TABLE public.profiles IS 'User profiles table with Row Level Security enabled';
 
+
+
+
+
+
+

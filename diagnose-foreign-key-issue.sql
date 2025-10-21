@@ -45,3 +45,9 @@ FROM auth.users u
 LEFT JOIN agencies a ON u.id = a.user_id
 WHERE u.email = 'binziyap03@gmail.com';
 
+
+
+
+
+
+

@@ -75,6 +75,179 @@ def build_daily_itinerary(days: int, attractions: List[Dict[str, Any]], accommod
 	return result
 
 
+def calculate_itinerary_price(days: int, attractions: List[Dict[str, Any]], accommodations: List[Dict[str, Any]], restaurants: List[Dict[str, Any]], max_travelers: int = 1, transport_options: List[str] = None) -> Dict[str, Any]:
+	"""Calculate comprehensive pricing for the itinerary based on all factors."""
+	
+	# Base pricing per component per person (in Indian Rupees) - MARKET REALISTIC PRICING
+	BASE_ACCOMMODATION_COST_PER_PERSON = 600   # ₹600 per night per person (budget hotels)
+	BASE_ATTRACTION_COST_PER_PERSON = 100      # ₹100 per attraction per person (entry fees)
+	BASE_RESTAURANT_COST_PER_PERSON = 200      # ₹200 per restaurant visit per person (meal cost)
+	BASE_GUIDE_COST_PER_PERSON = 300           # ₹300 per day per person (guide fees)
+	BASE_INSURANCE_COST_PER_PERSON = 50        # ₹50 per day per person (travel insurance)
+	
+	# Transport pricing based on type and distance - MARKET REALISTIC PRICING
+	BASE_TRANSPORT_COST_PER_DAY = 300          # ₹300 base transport cost per day
+	BASE_TRANSPORT_COST_PER_KM = 5             # ₹5 per km for long distances
+	# Add-on transport components (additive)
+	LOCAL_TRANSPORT_COST_PER_DAY = 100         # ₹100 per day per person for local city transport
+	AIRPORT_TRANSFER_COST_PER_TRIP = 150       # ₹150 per person per airport transfer (one-way)
+	
+	# Traveler group discounts
+	GROUP_DISCOUNT_THRESHOLD = 4  # Apply discount for groups of 4+
+	GROUP_DISCOUNT_RATE = 0.1     # 10% discount for large groups
+	
+	# Calculate total distance for transport pricing
+	total_distance = calculate_total_route_distance(attractions, accommodations, restaurants)
+	
+	# Calculate base costs per person
+	accommodation_cost_per_person = BASE_ACCOMMODATION_COST_PER_PERSON * days
+	attraction_cost_per_person = BASE_ATTRACTION_COST_PER_PERSON * len(attractions)
+	restaurant_cost_per_person = BASE_RESTAURANT_COST_PER_PERSON * len(restaurants)  # Fixed: removed * days
+	guide_cost_per_person = BASE_GUIDE_COST_PER_PERSON * days
+	insurance_cost_per_person = BASE_INSURANCE_COST_PER_PERSON * days
+	
+	# Transport cost calculation based on distance and transport options
+	transport_cost_per_person = BASE_TRANSPORT_COST_PER_DAY * days
+	if total_distance > 100:  # For longer distances, add per-km cost
+		transport_cost_per_person += (total_distance - 100) * BASE_TRANSPORT_COST_PER_KM
+	
+	# Adjust transport cost: choose highest-cost intercity mode, and add local components
+	transport_multiplier = 1.0
+	selected = set((transport_options or []) or [])
+	# normalize values sent from UI
+	if 'car_rental' in selected:
+		selected.add('car')
+	
+	# Intercity mode multipliers
+	mode_multipliers = {
+		'flights': 2.5,
+		'train': 1.8,
+		'bus': 1.2,
+		'car': 1.5
+	}
+	if selected:
+		present_modes = [mode_multipliers[m] for m in mode_multipliers.keys() if m in selected]
+		if present_modes:
+			transport_multiplier = max(present_modes)
+	
+	transport_cost_per_person *= transport_multiplier
+	
+	# Additive local components
+	if 'local_transport' in selected:
+		transport_cost_per_person += LOCAL_TRANSPORT_COST_PER_DAY * days
+	# Assume two transfers by default (to and from airport) if selected
+	if 'airport_transfer' in selected:
+		transport_cost_per_person += AIRPORT_TRANSFER_COST_PER_TRIP * 2
+	
+	# Calculate total cost for all travelers
+	total_accommodation_cost = accommodation_cost_per_person * max_travelers
+	total_attraction_cost = attraction_cost_per_person * max_travelers
+	total_restaurant_cost = restaurant_cost_per_person * max_travelers
+	total_transport_cost = transport_cost_per_person * max_travelers
+	total_guide_cost = guide_cost_per_person * max_travelers
+	total_insurance_cost = insurance_cost_per_person * max_travelers
+	
+	# Apply group discount if applicable
+	group_discount = 0
+	if max_travelers >= GROUP_DISCOUNT_THRESHOLD:
+		subtotal_before_discount = (total_accommodation_cost + total_attraction_cost + 
+								   total_restaurant_cost + total_transport_cost + 
+								   total_guide_cost + total_insurance_cost)
+		group_discount = subtotal_before_discount * GROUP_DISCOUNT_RATE
+	
+	# Calculate subtotal after group discount
+	subtotal = (total_accommodation_cost + total_attraction_cost + total_restaurant_cost + 
+				total_transport_cost + total_guide_cost + total_insurance_cost - group_discount)
+	
+	# Add margins and fees - COMPETITIVE MARGINS
+	agency_margin = subtotal * 0.08  # 8% agency margin (competitive)
+	service_fee = subtotal * 0.02    # 2% service fee (minimal)
+	taxes = subtotal * 0.03          # 3% taxes (reduced)
+	
+	# Final total
+	total_price = subtotal + agency_margin + service_fee + taxes
+	
+	return {
+		"pricing_factors": {
+			"days": days,
+			"max_travelers": max_travelers,
+			"attractions_count": len(attractions),
+			"restaurants_count": len(restaurants),
+			"accommodations_count": len(accommodations),
+			"transport_options": transport_options or [],
+			"total_distance_km": round(total_distance, 2),
+			"group_discount_applied": group_discount > 0
+		},
+		"base_costs_per_person": {
+			"accommodation": round(accommodation_cost_per_person, 2),
+			"attractions": round(attraction_cost_per_person, 2),
+			"restaurants": round(restaurant_cost_per_person, 2),
+			"transport": round(transport_cost_per_person, 2),
+			"guide": round(guide_cost_per_person, 2),
+			"insurance": round(insurance_cost_per_person, 2)
+		},
+		"total_costs": {
+			"accommodation": round(total_accommodation_cost, 2),
+			"attractions": round(total_attraction_cost, 2),
+			"restaurants": round(total_restaurant_cost, 2),
+			"transport": round(total_transport_cost, 2),
+			"guide": round(total_guide_cost, 2),
+			"insurance": round(total_insurance_cost, 2),
+			"group_discount": round(group_discount, 2)
+		},
+		"fees_and_margins": {
+			"agency_margin": round(agency_margin, 2),
+			"service_fee": round(service_fee, 2),
+			"taxes": round(taxes, 2)
+		},
+		"totals": {
+			"subtotal": round(subtotal, 2),
+			"total_price": round(total_price, 2),
+			"price_per_person": round(total_price / max_travelers, 2)
+		},
+		"route_info": {
+			"total_distance_km": round(total_distance, 2),
+			"estimated_travel_time_hours": round(total_distance / 60, 1),  # Assume 60km/h average
+			"transport_type_multiplier": round(transport_multiplier, 1)
+		}
+	}
+
+
+def calculate_total_route_distance(attractions: List[Dict[str, Any]], accommodations: List[Dict[str, Any]], restaurants: List[Dict[str, Any]]) -> float:
+	"""Calculate total route distance using haversine formula."""
+	
+	all_locations = []
+	
+	# Add accommodation locations
+	for acc in accommodations:
+		coords = acc.get('coordinates', {})
+		if coords.get('lat') and coords.get('lng'):
+			all_locations.append(coords)
+	
+	# Add attraction locations
+	for attr in attractions:
+		coords = attr.get('coordinates', {})
+		if coords.get('lat') and coords.get('lng'):
+			all_locations.append(coords)
+	
+	# Add restaurant locations
+	for rest in restaurants:
+		coords = rest.get('coordinates', {})
+		if coords.get('lat') and coords.get('lng'):
+			all_locations.append(coords)
+	
+	if len(all_locations) < 2:
+		return 0.0
+	
+	# Calculate total distance by visiting all locations in sequence
+	total_distance = 0.0
+	for i in range(len(all_locations) - 1):
+		distance = haversine_distance_km(all_locations[i], all_locations[i + 1])
+		total_distance += distance
+	
+	return total_distance
+
+
 def summarize_with_openai(payload: Dict[str, Any]) -> str:
 	if not OPENAI_API_KEY or not openai:
 		return ''
@@ -105,6 +278,8 @@ def generate():
 	attractions = data.get('attractions') or []
 	accommodations = data.get('accommodations') or []
 	restaurants = data.get('restaurants') or []
+	max_travelers = int(data.get('max_travelers') or data.get('travelers') or 1)
+	transport_options = data.get('transport_options') or data.get('transportationOptions') or []
 
 	# Normalize minimal fields required
 	def normalize(items, kind):
@@ -123,19 +298,64 @@ def generate():
 
 	daily = build_daily_itinerary(duration, n_attractions, n_accommodations, n_restaurants)
 
+	# Calculate pricing and route information with all factors
+	pricing_info = calculate_itinerary_price(
+		duration, 
+		n_attractions, 
+		n_accommodations, 
+		n_restaurants,
+		max_travelers,
+		transport_options
+	)
+
 	summary = summarize_with_openai({
 		"duration_days": duration,
+		"max_travelers": max_travelers,
 		"attractions": n_attractions,
 		"accommodations": n_accommodations,
 		"restaurants": n_restaurants,
-		"itinerary": daily
+		"transport_options": transport_options,
+		"itinerary": daily,
+		"pricing": pricing_info
 	})
+
+	# Build ordered route coordinates based on the generated daily itinerary
+	name_to_obj = {}
+	for item in (n_attractions + n_accommodations + n_restaurants):
+		name_to_obj[item.get('name','').strip().lower()] = item
+
+	ordered_coords = []
+	slots = ['morning', 'afternoon', 'evening']
+	for day in daily:
+		for slot in slots:
+			val = day.get(slot)
+			if not val:
+				continue
+			key = (val.split(':',1)[1] if isinstance(val, str) and ':' in val else (val.get('name') if isinstance(val, dict) else str(val))).strip().lower()
+			obj = name_to_obj.get(key)
+			if obj:
+				ordered_coords.append(obj)
+
+	# Append any remaining unique locations not already included
+	seen = set((o.get('name','').strip().lower() for o in ordered_coords))
+	for item in (n_attractions + n_accommodations + n_restaurants):
+		key = item.get('name','').strip().lower()
+		if key and key not in seen:
+			ordered_coords.append(item)
+			seen.add(key)
 
 	return jsonify({
 		"success": True,
 		"itinerary": daily,
 		"summary": summary,
-		"model_used": bool(summary)
+		"model_used": bool(summary),
+		"pricing": pricing_info,
+		"route_coordinates": ordered_coords,  # Ordered by itinerary, includes all places
+		"pricing_factors": {
+			"travelers": max_travelers,
+			"transport_type": transport_options,
+			"distance_km": pricing_info["route_info"]["total_distance_km"]
+		}
 	})
 
 

@@ -79,3 +79,9 @@ ALTER DATABASE postgres SET app.settings.enable_email_confirmations = 'true';
 SELECT 
     current_setting('app.settings.enable_email_confirmations', true) as email_confirmations_enabled;
 
+
+
+
+
+
+

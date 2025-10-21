@@ -21,3 +21,9 @@ ON CONFLICT (id) DO UPDATE SET
 -- Check current auth configuration
 SELECT * FROM auth.config;
 
+
+
+
+
+
+

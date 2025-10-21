@@ -6,6 +6,12 @@ const session = require('express-session');
 const passport = require('passport');
 require('dotenv').config();
 
+// Debug: Check if environment variables are loaded
+console.log('🔍 Debug - Environment variables:');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Loaded' : '❌ Missing');
+console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Loaded' : '❌ Missing');
+console.log('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? '✅ Loaded' : '❌ Missing');
+
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const supabaseAuthRoutes = require('./routes/supabase-auth');
@@ -15,7 +21,6 @@ const accurateSearchRoutes = require('./routes/search');
 const googlePlacesRoutes = require('./routes/places-search');
 const placesAutocompleteRoutes = require('./routes/places-autocomplete');
 const itineraryGeneratorRoutes = require('./routes/itinerary-generator');
-const hotelsRoutes = require('./routes/hotels');
 const restaurantsRoutes = require('./routes/restaurants');
 const { initializeSupabase } = require('./config/supabase');
 require('./config/passport'); // Initialize passport configuration
@@ -74,7 +79,6 @@ app.use('/api/attractions', attractionsRoutes);
 app.use('/api/search', accurateSearchRoutes);
 app.use('/api/search/google', googlePlacesRoutes);
 app.use('/api/autocomplete/places', placesAutocompleteRoutes);
-app.use('/api/search/hotels', hotelsRoutes);
 app.use('/api/search/restaurants', restaurantsRoutes);
 app.use('/api/itinerary', itineraryGeneratorRoutes);
 

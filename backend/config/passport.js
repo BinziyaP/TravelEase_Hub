@@ -116,7 +116,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   }
 }));
 } else {
-  console.log('⚠️ Google OAuth credentials not provided, skipping Google OAuth strategy');
+  console.log('ℹ️ Google OAuth not configured - using Supabase authentication only');
 }
 
 module.exports = passport;
