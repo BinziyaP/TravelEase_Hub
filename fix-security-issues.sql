@@ -212,3 +212,6 @@ COMMENT ON TABLE public.profiles IS 'User profiles table with Row Level Security
 
 
 
+
+
+

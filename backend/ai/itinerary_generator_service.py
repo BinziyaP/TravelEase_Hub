@@ -78,11 +78,11 @@ def build_daily_itinerary(days: int, attractions: List[Dict[str, Any]], accommod
 def calculate_itinerary_price(days: int, attractions: List[Dict[str, Any]], accommodations: List[Dict[str, Any]], restaurants: List[Dict[str, Any]], max_travelers: int = 1, transport_options: List[str] = None) -> Dict[str, Any]:
 	"""Calculate comprehensive pricing for the itinerary based on all factors."""
 	
-	# Base pricing per component per person (in Indian Rupees) - MARKET REALISTIC PRICING
+	# Base pricing per component per person (in Indian Rupees) - REALISTIC PRICING FOR INDIA
 	BASE_ACCOMMODATION_COST_PER_PERSON = 600   # ₹600 per night per person (budget hotels)
 	BASE_ATTRACTION_COST_PER_PERSON = 100      # ₹100 per attraction per person (entry fees)
 	BASE_RESTAURANT_COST_PER_PERSON = 200      # ₹200 per restaurant visit per person (meal cost)
-	BASE_GUIDE_COST_PER_PERSON = 300           # ₹300 per day per person (guide fees)
+	BASE_GUIDE_COST_PER_GROUP_PER_DAY = 1200   # ₹1,200 per day for entire group (realistic guide rate)
 	BASE_INSURANCE_COST_PER_PERSON = 50        # ₹50 per day per person (travel insurance)
 	
 	# Transport pricing based on type and distance - MARKET REALISTIC PRICING
@@ -103,7 +103,7 @@ def calculate_itinerary_price(days: int, attractions: List[Dict[str, Any]], acco
 	accommodation_cost_per_person = BASE_ACCOMMODATION_COST_PER_PERSON * days
 	attraction_cost_per_person = BASE_ATTRACTION_COST_PER_PERSON * len(attractions)
 	restaurant_cost_per_person = BASE_RESTAURANT_COST_PER_PERSON * len(restaurants)  # Fixed: removed * days
-	guide_cost_per_person = BASE_GUIDE_COST_PER_PERSON * days
+	guide_cost_per_person = (BASE_GUIDE_COST_PER_GROUP_PER_DAY * days) / max_travelers  # Guide cost shared among all travelers
 	insurance_cost_per_person = BASE_INSURANCE_COST_PER_PERSON * days
 	
 	# Transport cost calculation based on distance and transport options
@@ -144,7 +144,7 @@ def calculate_itinerary_price(days: int, attractions: List[Dict[str, Any]], acco
 	total_attraction_cost = attraction_cost_per_person * max_travelers
 	total_restaurant_cost = restaurant_cost_per_person * max_travelers
 	total_transport_cost = transport_cost_per_person * max_travelers
-	total_guide_cost = guide_cost_per_person * max_travelers
+	total_guide_cost = BASE_GUIDE_COST_PER_GROUP_PER_DAY * days  # Guide cost is per group, not per person
 	total_insurance_cost = insurance_cost_per_person * max_travelers
 	
 	# Apply group discount if applicable
@@ -159,10 +159,10 @@ def calculate_itinerary_price(days: int, attractions: List[Dict[str, Any]], acco
 	subtotal = (total_accommodation_cost + total_attraction_cost + total_restaurant_cost + 
 				total_transport_cost + total_guide_cost + total_insurance_cost - group_discount)
 	
-	# Add margins and fees - COMPETITIVE MARGINS
-	agency_margin = subtotal * 0.08  # 8% agency margin (competitive)
+	# Add margins and fees - REALISTIC MARGINS FOR INDIA
+	agency_margin = subtotal * 0.10  # 10% agency margin (realistic for travel industry)
 	service_fee = subtotal * 0.02    # 2% service fee (minimal)
-	taxes = subtotal * 0.03          # 3% taxes (reduced)
+	taxes = subtotal * 0.05          # 5% GST (realistic for travel packages in India)
 	
 	# Final total
 	total_price = subtotal + agency_margin + service_fee + taxes
