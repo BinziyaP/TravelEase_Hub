@@ -419,10 +419,13 @@ router.get('/public/packages', async (req, res) => {
         status,
         created_at,
         agency_id,
-        route_coordinates,
-        selected_places,
-        total_distance_km,
-        estimated_travel_time_hours
+        transportation_included,
+        transportation_prices,
+        meals_included,
+        accommodation_type,
+        accommodation_name,
+        attractions,
+        itinerary
       `)
       .eq('status', 'approved');
 
@@ -517,7 +520,22 @@ router.get('/public/packages', async (req, res) => {
         route_coordinates: pkg.route_coordinates || [],
         selected_places: pkg.selected_places || [],
         total_distance_km: pkg.total_distance_km || 0,
-        estimated_travel_time_hours: pkg.estimated_travel_time_hours || 0
+        estimated_travel_time_hours: pkg.estimated_travel_time_hours || 0,
+        // Add missing fields for consistent pricing and data
+        total_costs: pkg.total_costs || {},
+        fees_and_margins: pkg.fees_and_margins || {},
+        attractions: pkg.attractions || [],
+        selected_hotels: pkg.selected_hotels || [],
+        selected_restaurants: pkg.selected_restaurants || [],
+        // Include transport data
+        transportation_included: pkg.transportation_included || [],
+        transportation_prices: pkg.transportation_prices || {},
+        meals_included: pkg.meals_included || [],
+        accommodation_type: pkg.accommodation_type,
+        accommodation_name: pkg.accommodation_name,
+        itinerary: Array.isArray(pkg.itinerary) ? pkg.itinerary : [],
+        daily_itinerary: Array.isArray(pkg.daily_itinerary) ? pkg.daily_itinerary : (Array.isArray(pkg.itinerary) ? pkg.itinerary : []),
+        features: pkg.features || []
       };
     }) || [];
 
@@ -879,7 +897,7 @@ router.get('/public/packages/:id', async (req, res) => {
       selected_hotels: pkg.selected_hotels || [],
       selected_restaurants: pkg.selected_restaurants || [],
       transportation_included: pkg.transportation_included || [],
-      transportation_details: pkg.transportation_details || {},
+      transportation_prices: pkg.transportation_prices || {},
       attractions: pkg.attractions || [],
       features: pkg.features || [],
       // Itinerary support (both legacy 'itinerary' and newer 'daily_itinerary')
@@ -890,6 +908,9 @@ router.get('/public/packages/:id', async (req, res) => {
       selected_places: pkg.selected_places || [],
       total_distance_km: pkg.total_distance_km || 0,
       estimated_travel_time_hours: pkg.estimated_travel_time_hours || 0,
+      // Pricing data for consistent breakdown
+      total_costs: pkg.total_costs || {},
+      fees_and_margins: pkg.fees_and_margins || {},
       agencies: agency
     };
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const { getDestinationAccommodations, hasDestinationAccommodations } = require('../utils/destinationAccommodations');
 
 // Google Places API configuration
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
@@ -72,29 +73,53 @@ const searchHotelsWithGooglePlaces = async (location, radius = 25000) => {
   return hotels.filter(Boolean);
 };
 
-const mockHotels = (location) => [
-  {
-    name: 'Hotel Paradise',
-    rating: '4.5',
-    address: `123 Main Street, ${location}`,
-    type: 'hotel',
-    coordinates: null,
-  },
-  {
-    name: 'Resort Oasis',
-    rating: '4.8',
-    address: `456 Beach Road, ${location}`,
-    type: 'resort',
-    coordinates: null,
-  },
-  {
-    name: 'Guesthouse Comfort',
-    rating: '4.2',
-    address: `789 Hill View, ${location}`,
-    type: 'guesthouse',
-    coordinates: null,
+const mockHotels = (location) => {
+  // First try to get destination-specific accommodations
+  const destinationAccommodations = getDestinationAccommodations(location, 6);
+  
+  if (destinationAccommodations.length > 0) {
+    console.log(`🏨 Using destination-specific accommodations for: ${location}`);
+    return destinationAccommodations.map(acc => ({
+      name: acc.name,
+      rating: acc.rating,
+      address: acc.address,
+      type: acc.type,
+      coordinates: acc.coordinates,
+      price_level: acc.priceRange === '$$$$' ? 4 : acc.priceRange === '$$$' ? 3 : acc.priceRange === '$$' ? 2 : 1,
+      amenities: acc.amenities || [],
+      source: 'destination_specific'
+    }));
   }
-];
+  
+  // Fallback to generic mock data if no destination-specific accommodations
+  console.log(`⚠️ No destination-specific accommodations found for: ${location}, using generic fallback`);
+  return [
+    {
+      name: 'Hotel Paradise',
+      rating: '4.5',
+      address: `123 Main Street, ${location}`,
+      type: 'hotel',
+      coordinates: null,
+      source: 'generic_fallback'
+    },
+    {
+      name: 'Resort Oasis',
+      rating: '4.8',
+      address: `456 Beach Road, ${location}`,
+      type: 'resort',
+      coordinates: null,
+      source: 'generic_fallback'
+    },
+    {
+      name: 'Guesthouse Comfort',
+      rating: '4.2',
+      address: `789 Hill View, ${location}`,
+      type: 'guesthouse',
+      coordinates: null,
+      source: 'generic_fallback'
+    }
+  ];
+};
 
 // GET /api/search/hotels
 router.get('/', async (req, res) => {
@@ -133,6 +158,17 @@ router.get('/', async (req, res) => {
 });
 
 module.exports = router;
+
+
+
+
+
+
+
+
+
+
+
 
 
 

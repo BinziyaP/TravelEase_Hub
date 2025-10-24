@@ -16,7 +16,9 @@ except Exception:  # pragma: no cover
 	openai = None  # type: ignore
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'], 
+     allow_headers=['Content-Type', 'Authorization'], 
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 PORT = int(os.getenv('ITINERARY_SERVICE_PORT', '5055'))
 
@@ -46,32 +48,64 @@ def simple_cluster(attractions: List[Dict[str, Any]], days: int) -> List[List[Di
 	# Seed: sort by latitude then split
 	sorted_atts = sorted(attractions, key=lambda x: (x.get('coordinates', {}).get('lat', 0), x.get('coordinates', {}).get('lng', 0)))
 	clusters: List[List[Dict[str, Any]]] = [[] for _ in range(days)]
-	for idx, att in enumerate(sorted_atts):
-		clusters[idx % days].append(att)
+	
+	# Improved distribution to ensure all attractions are included
+	# Distribute attractions more evenly across days
+	attractions_per_day = len(sorted_atts) // days
+	extra_attractions = len(sorted_atts) % days
+	
+	attraction_idx = 0
+	for day_idx in range(days):
+		# Calculate how many attractions this day should get
+		day_attraction_count = attractions_per_day
+		if day_idx < extra_attractions:
+			day_attraction_count += 1
+		
+		# Add attractions for this day
+		for _ in range(day_attraction_count):
+			if attraction_idx < len(sorted_atts):
+				clusters[day_idx].append(sorted_atts[attraction_idx])
+				attraction_idx += 1
+	
 	return clusters
 
 
 def build_daily_itinerary(days: int, attractions: List[Dict[str, Any]], accommodations: List[Dict[str, Any]], restaurants: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 	clusters = simple_cluster(attractions, max(1, days))
 	result: List[Dict[str, Any]] = []
+	
+	print(f"🗓️ Building {days}-day itinerary with {len(attractions)} attractions")
+	print(f"📊 Clustered into {len(clusters)} days: {[len(cluster) for cluster in clusters]}")
+	
 	for i in range(max(1, days)):
 		day_plan: Dict[str, Any] = {}
-		# Morning: a top attraction for the cluster
-		if clusters[i]:
-			day_plan['morning'] = to_activity_value(clusters[i][0]['name'], 'attraction')
-		# Afternoon: next attraction or free time
-		if len(clusters[i]) > 1:
-			day_plan['afternoon'] = to_activity_value(clusters[i][1]['name'], 'attraction')
+		day_attractions = clusters[i] if i < len(clusters) else []
+		
+		# Morning: first attraction for the day
+		if len(day_attractions) > 0:
+			day_plan['morning'] = to_activity_value(day_attractions[0]['name'], 'attraction')
+		
+		# Afternoon: second attraction or free time
+		if len(day_attractions) > 1:
+			day_plan['afternoon'] = to_activity_value(day_attractions[1]['name'], 'attraction')
+		elif len(day_attractions) > 0:
+			# If only one attraction, spread it across morning and afternoon
+			day_plan['afternoon'] = 'free_time'
 		else:
 			day_plan['afternoon'] = 'free_time'
-		# Evening: restaurant or check-in
-		if restaurants:
+		
+		# Evening: restaurant, accommodation, or travel
+		if restaurants and i < len(restaurants):
+			day_plan['evening'] = to_activity_value(restaurants[i]['name'], 'restaurant')
+		elif restaurants:
 			day_plan['evening'] = to_activity_value(restaurants[i % len(restaurants)]['name'], 'restaurant')
-		elif accommodations:
-			day_plan['evening'] = 'check_in'
+		elif accommodations and i < len(accommodations):
+			day_plan['evening'] = to_activity_value(accommodations[i]['name'], 'accommodation')
 		else:
-			day_plan['evening'] = 'travel'
+			day_plan['evening'] = 'check_in' if i == 0 else 'travel'
+		
 		result.append(day_plan)
+	
 	return result
 
 
@@ -326,23 +360,43 @@ def generate():
 
 	ordered_coords = []
 	slots = ['morning', 'afternoon', 'evening']
+	seen_names = set()
+	
+	# First, add coordinates from the daily itinerary
 	for day in daily:
 		for slot in slots:
 			val = day.get(slot)
-			if not val:
+			if not val or val in ['free_time', 'check_in', 'travel']:
 				continue
 			key = (val.split(':',1)[1] if isinstance(val, str) and ':' in val else (val.get('name') if isinstance(val, dict) else str(val))).strip().lower()
 			obj = name_to_obj.get(key)
-			if obj:
+			if obj and key not in seen_names:
 				ordered_coords.append(obj)
+				seen_names.add(key)
 
-	# Append any remaining unique locations not already included
-	seen = set((o.get('name','').strip().lower() for o in ordered_coords))
+	# Then, append any remaining unique locations not already included
 	for item in (n_attractions + n_accommodations + n_restaurants):
 		key = item.get('name','').strip().lower()
-		if key and key not in seen:
+		if key and key not in seen_names:
 			ordered_coords.append(item)
-			seen.add(key)
+			seen_names.add(key)
+	
+	# PRESERVE ALL COORDINATES - Don't filter out any attractions
+	final_coords = []
+	for idx, coord in enumerate(ordered_coords):
+		# Add small offset to each coordinate to ensure they're all unique
+		import copy
+		unique_coord = copy.deepcopy(coord)
+		offset = idx * 0.0001  # Small offset based on index
+		if 'coordinates' in unique_coord:
+			unique_coord['coordinates']['lat'] += offset
+			unique_coord['coordinates']['lng'] += offset
+		final_coords.append(unique_coord)
+	
+	# Ensure we have all attractions in the route
+	print(f"🔍 Route generation: Found {len(final_coords)} total locations for route")
+	print(f"📊 Breakdown: {len(n_attractions)} attractions, {len(n_accommodations)} accommodations, {len(n_restaurants)} restaurants")
+	print(f"🎯 Final coordinates count: {len(final_coords)}")
 
 	return jsonify({
 		"success": True,
@@ -350,7 +404,7 @@ def generate():
 		"summary": summary,
 		"model_used": bool(summary),
 		"pricing": pricing_info,
-		"route_coordinates": ordered_coords,  # Ordered by itinerary, includes all places
+		"route_coordinates": final_coords,  # Ordered by itinerary, includes all places with unique coordinates
 		"pricing_factors": {
 			"travelers": max_travelers,
 			"transport_type": transport_options,
