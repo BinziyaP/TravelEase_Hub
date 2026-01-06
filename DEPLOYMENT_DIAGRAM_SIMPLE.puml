@@ -1,0 +1,45 @@
+@startuml TravelEase_DeploymentDiagram
+
+title TravelEase System - Deployment Diagram
+
+node "User Device" {
+  component "React Frontend" as ReactFrontend
+}
+
+node "Application Server" {
+  component "Express.js App" as ExpressApp
+  component "Authentication Handler" as AuthHandler
+}
+
+node "Supabase Services" {
+  database "Supabase Auth" as SupabaseAuth
+  database "Supabase DB" as SupabaseDB
+  database "Supabase Storage" as SupabaseStorage
+}
+
+node "Google APIs" {
+  component "Google Maps API" as GoogleMaps
+  component "Gmail API" as GmailAPI
+}
+
+node "Payment Gateway" {
+  component "Razorpay/Stripe" as PaymentGateway
+}
+
+' Connections
+ReactFrontend --> ExpressApp : HTTP/HTTPS
+ExpressApp --> AuthHandler
+AuthHandler --> SupabaseAuth
+ExpressApp --> SupabaseDB
+ExpressApp --> SupabaseStorage
+ExpressApp --> GoogleMaps
+ExpressApp --> GmailAPI
+ExpressApp --> PaymentGateway
+
+@enduml
+
+
+
+
+
+

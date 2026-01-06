@@ -1,0 +1,67 @@
+@startuml TravelEase_CollaborationDiagram
+
+title TravelEase System - Collaboration Diagram
+
+object User
+object UserInterface
+object UserController
+object PackageBrowser
+object BookingManager
+object PaymentManager
+object AgencyInterface
+object AgencyController
+object PackageManager
+object AdminInterface
+object AdminController
+object ApprovalManager
+object SupabaseDB
+object EmailService
+
+' User Booking Collaboration
+User --> UserInterface : 1: Browse
+UserInterface --> UserController : 2: Request
+UserController --> PackageBrowser : 3: Get Packages
+PackageBrowser --> SupabaseDB : 4: Query
+SupabaseDB --> PackageBrowser : 5: Data
+PackageBrowser --> UserController : 6: List
+UserController --> UserInterface : 7: Display
+UserInterface --> User : 8: Show
+
+User --> UserInterface : 9: Book
+UserInterface --> UserController : 10: Create
+UserController --> BookingManager : 11: Process
+BookingManager --> SupabaseDB : 12: Store
+SupabaseDB --> BookingManager : 13: Confirm
+BookingManager --> PaymentManager : 14: Pay
+PaymentManager --> SupabaseDB : 15: Store
+SupabaseDB --> PaymentManager : 16: Confirm
+PaymentManager --> UserController : 17: Done
+UserController --> UserInterface : 18: Success
+UserInterface --> User : 19: Confirmed
+
+' Agency Package Creation
+AgencyInterface --> AgencyController : 1: Create
+AgencyController --> PackageManager : 2: Submit
+PackageManager --> SupabaseDB : 3: Store
+SupabaseDB --> PackageManager : 4: Confirm
+PackageManager --> AgencyController : 5: Success
+AgencyController --> AgencyInterface : 6: Done
+
+' Admin Approval
+AdminInterface --> AdminController : 1: View
+AdminController --> SupabaseDB : 2: Query
+SupabaseDB --> AdminController : 3: Data
+AdminController --> AdminInterface : 4: Display
+
+AdminInterface --> AdminController : 5: Approve
+AdminController --> ApprovalManager : 6: Process
+ApprovalManager --> SupabaseDB : 7: Update
+SupabaseDB --> ApprovalManager : 8: Confirm
+ApprovalManager --> EmailService : 9: Notify
+EmailService --> SupabaseDB : 10: Log
+SupabaseDB --> EmailService : 11: Confirm
+EmailService --> ApprovalManager : 12: Sent
+ApprovalManager --> AdminController : 13: Done
+AdminController --> AdminInterface : 14: Success
+
+@enduml

@@ -1,0 +1,76 @@
+@startuml TravelEase_UseCase_Diagram
+
+title TravelEase System - Use Case Diagram
+
+left to right direction
+
+' Actors
+actor "Regular User" as User
+actor "Travel Agency" as Agency
+actor "Administrator" as Admin
+
+' System Boundary
+rectangle "TravelEase System" {
+  
+  ' Authentication
+  usecase "Login" as UC1
+  usecase "Register Account" as UC2
+  
+  ' User Features
+  usecase "Browse Travel Packages" as UC3
+  usecase "Search Packages" as UC4
+  usecase "Book Travel Package" as UC5
+  usecase "Process Payment" as UC6
+  usecase "View Booking History" as UC7
+  usecase "Manage Wishlist" as UC8
+  usecase "Manage Profile" as UC9
+  
+  ' Agency Features
+  usecase "Register as Agency" as UC10
+  usecase "Create Travel Package" as UC11
+  usecase "Manage Packages" as UC12
+  usecase "View Package Bookings" as UC13
+  
+  ' Admin Features
+  usecase "Approve Agency Registration" as UC14
+  usecase "Approve Travel Package" as UC15
+  usecase "Manage Users" as UC16
+  usecase "View System Statistics" as UC17
+}
+
+' Regular User Relationships
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC9
+
+' Travel Agency Relationships
+Agency --> UC1
+Agency --> UC2
+Agency --> UC10
+Agency --> UC11
+Agency --> UC12
+Agency --> UC13
+
+' Administrator Relationships
+Admin --> UC1
+Admin --> UC14
+Admin --> UC15
+Admin --> UC16
+Admin --> UC17
+
+' Include Relationships
+UC5 .> UC6 : <<include>>
+
+@enduml
+
+
+
+
+
+

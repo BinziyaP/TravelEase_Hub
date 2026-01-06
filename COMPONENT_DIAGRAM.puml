@@ -1,0 +1,107 @@
+@startuml TravelEase_ComponentDiagram
+
+title TravelEase System - Component Diagram
+
+actor "Regular User" as User
+actor "Travel Agency" as Agency
+actor "Administrator" as Admin
+
+rectangle "TravelEase System" {
+
+  ' User Components
+  component "User Interface" as UserUI
+  component "User Controller" as UserController
+  component "Authentication Service" as AuthService
+  component "Package Browser" as PackageBrowser
+  component "Booking Manager" as BookingManager
+  component "Wishlist Manager" as WishlistManager
+  component "Profile Manager" as ProfileManager
+  component "Payment Manager" as PaymentManager
+
+  ' Agency Components
+  component "Agency Interface" as AgencyUI
+  component "Agency Controller" as AgencyController
+  component "Package Manager" as PackageManager
+  component "Booking Viewer" as BookingViewer
+
+  ' Admin Components
+  component "Admin Interface" as AdminUI
+  component "Admin Controller" as AdminController
+  component "Agency Approval Manager" as AgencyApprovalManager
+  component "Package Approval Manager" as PackageApprovalManager
+  component "User Manager" as UserManager
+  component "Statistics Manager" as StatisticsManager
+
+  ' Core Services
+  component "Geocoding Service" as GeocodingService
+  component "Itinerary Generator" as ItineraryGenerator
+  component "Search Service" as SearchService
+  component "Email Service" as EmailService
+
+  ' Database
+  database "Supabase DB" as SupabaseDB
+}
+
+' External Services
+cloud "External Services" {
+  component "Supabase Auth" as SupabaseAuth
+  component "Google Maps API" as GoogleMaps
+  component "Payment Gateway" as PaymentGateway
+}
+
+' User Connections
+User --> UserUI
+UserUI --> UserController
+UserController --> AuthService
+UserController --> PackageBrowser
+UserController --> BookingManager
+UserController --> WishlistManager
+UserController --> ProfileManager
+UserController --> PaymentManager
+
+AuthService --> SupabaseAuth
+AuthService --> SupabaseDB
+PackageBrowser --> SearchService
+PackageBrowser --> SupabaseDB
+BookingManager --> PaymentManager
+BookingManager --> SupabaseDB
+WishlistManager --> SupabaseDB
+ProfileManager --> SupabaseDB
+PaymentManager --> PaymentGateway
+PaymentManager --> SupabaseDB
+
+' Agency Connections
+Agency --> AgencyUI
+AgencyUI --> AgencyController
+AgencyController --> PackageManager
+AgencyController --> BookingViewer
+
+PackageManager --> GeocodingService
+PackageManager --> ItineraryGenerator
+PackageManager --> SupabaseDB
+BookingViewer --> SupabaseDB
+GeocodingService --> GoogleMaps
+ItineraryGenerator --> SupabaseDB
+
+' Admin Connections
+Admin --> AdminUI
+AdminUI --> AdminController
+AdminController --> AgencyApprovalManager
+AdminController --> PackageApprovalManager
+AdminController --> UserManager
+AdminController --> StatisticsManager
+
+AgencyApprovalManager --> EmailService
+AgencyApprovalManager --> SupabaseDB
+PackageApprovalManager --> SupabaseDB
+UserManager --> SupabaseDB
+StatisticsManager --> SupabaseDB
+EmailService --> SupabaseDB
+
+@enduml
+
+
+
+
+
+

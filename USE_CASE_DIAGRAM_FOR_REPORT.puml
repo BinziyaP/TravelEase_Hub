@@ -1,0 +1,113 @@
+@startuml TravelEase_UseCase_Diagram
+
+title TravelEase System - Use Case Diagram
+
+left to right direction
+
+' Actors
+actor "Regular User" as User
+actor "Travel Agency" as Agency
+actor "Administrator" as Admin
+
+' System Boundary
+rectangle "TravelEase System" {
+  
+  ' Authentication
+  usecase "Login" as UC1
+  usecase "Register Account" as UC2
+  usecase "Reset Password" as UC3
+  
+  ' User Features
+  usecase "Browse Travel Packages" as UC4
+  usecase "Search Packages" as UC5
+  usecase "Filter Packages" as UC6
+  usecase "View Package Details" as UC7
+  usecase "Book Travel Package" as UC8
+  usecase "Process Payment" as UC9
+  usecase "View Booking History" as UC10
+  usecase "Cancel Booking" as UC11
+  usecase "Manage Wishlist" as UC12
+  usecase "Manage Profile" as UC13
+  usecase "View Itinerary" as UC14
+  usecase "View Route Map" as UC15
+  
+  ' Agency Features
+  usecase "Register as Agency" as UC16
+  usecase "Create Travel Package" as UC17
+  usecase "Edit Package" as UC18
+  usecase "Delete Package" as UC19
+  usecase "View Own Packages" as UC20
+  usecase "Manage Package Pricing" as UC21
+  usecase "Add Package Details" as UC22
+  usecase "View Package Bookings" as UC23
+  usecase "Manage Agency Profile" as UC24
+  usecase "Upload License Documents" as UC25
+  
+  ' Admin Features
+  usecase "Approve Agency Registration" as UC26
+  usecase "Reject Agency Registration" as UC27
+  usecase "View All Agencies" as UC28
+  usecase "Approve Travel Package" as UC29
+  usecase "Reject Travel Package" as UC30
+  usecase "View All Packages" as UC31
+  usecase "Manage Users" as UC32
+  usecase "View System Statistics" as UC33
+}
+
+' Regular User Relationships
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC9
+User --> UC10
+User --> UC11
+User --> UC12
+User --> UC13
+User --> UC14
+User --> UC15
+
+' Travel Agency Relationships
+Agency --> UC1
+Agency --> UC2
+Agency --> UC3
+Agency --> UC16
+Agency --> UC17
+Agency --> UC18
+Agency --> UC19
+Agency --> UC20
+Agency --> UC21
+Agency --> UC22
+Agency --> UC23
+Agency --> UC24
+Agency --> UC25
+
+' Administrator Relationships
+Admin --> UC1
+Admin --> UC26
+Admin --> UC27
+Admin --> UC28
+Admin --> UC29
+Admin --> UC30
+Admin --> UC31
+Admin --> UC32
+Admin --> UC33
+
+' Include Relationships
+UC8 .> UC9 : <<include>>
+
+' Extend Relationships
+UC7 .> UC14 : <<extend>>
+UC7 .> UC15 : <<extend>>
+
+@enduml
+
+
+
+
+
+

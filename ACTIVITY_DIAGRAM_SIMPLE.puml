@@ -1,0 +1,28 @@
+@startuml TravelEase_ActivityDiagram
+
+title TravelEase System - Activity Diagram
+
+start
+
+partition "User" {
+  :Open Website;
+  :Login or Register;
+}
+
+partition "Regular User" {
+  :Browse Travel Packages;
+  :Select Package;
+  :Book Travel Package;
+  :Process Payment;
+  :Confirm Booking;
+}
+
+stop
+
+@enduml
+
+
+
+
+
+

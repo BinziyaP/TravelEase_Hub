@@ -1,0 +1,63 @@
+@startuml TravelEase_ComponentDiagram
+
+title TravelEase System - Component Diagram
+
+actor "Regular User" as User
+actor "Travel Agency" as Agency
+actor "Administrator" as Admin
+
+rectangle "TravelEase System" {
+
+  ' User Components
+  component "User Interface" as UserUI
+  component "User Controller" as UserController
+  component "Package Browser" as PackageBrowser
+  component "Booking Manager" as BookingManager
+  component "Payment Manager" as PaymentManager
+
+  ' Agency Components
+  component "Agency Interface" as AgencyUI
+  component "Agency Controller" as AgencyController
+  component "Package Manager" as PackageManager
+
+  ' Admin Components
+  component "Admin Interface" as AdminUI
+  component "Admin Controller" as AdminController
+  component "Approval Manager" as ApprovalManager
+
+  ' Core Services
+  component "Authentication Service" as AuthService
+  component "Email Service" as EmailService
+
+  ' Database
+  database "Supabase DB" as SupabaseDB
+}
+
+' User Connections
+User --> UserUI
+UserUI --> UserController
+UserController --> AuthService
+UserController --> PackageBrowser
+UserController --> BookingManager
+BookingManager --> PaymentManager
+AuthService --> SupabaseDB
+PackageBrowser --> SupabaseDB
+BookingManager --> SupabaseDB
+PaymentManager --> SupabaseDB
+
+' Agency Connections
+Agency --> AgencyUI
+AgencyUI --> AgencyController
+AgencyController --> PackageManager
+PackageManager --> SupabaseDB
+
+' Admin Connections
+Admin --> AdminUI
+AdminUI --> AdminController
+AdminController --> ApprovalManager
+ApprovalManager --> EmailService
+ApprovalManager --> SupabaseDB
+EmailService --> SupabaseDB
+
+@enduml
+

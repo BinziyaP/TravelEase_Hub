@@ -1,0 +1,30 @@
+@startuml TravelEase_CollaborationDiagram
+
+title TravelEase System - Collaboration Diagram
+
+object User
+object UserController
+object BookingManager
+object PackageManager
+object AdminController
+object SupabaseDB
+
+' User Booking
+User --> UserController : 1: Browse
+UserController --> SupabaseDB : 2: Get
+SupabaseDB --> UserController : 3: Return
+
+User --> UserController : 4: Book
+UserController --> BookingManager : 5: Create
+BookingManager --> SupabaseDB : 6: Store
+
+' Agency Package
+object AgencyController
+
+AgencyController --> PackageManager : 1: Create
+PackageManager --> SupabaseDB : 2: Store
+
+' Admin Approval
+AdminController --> SupabaseDB : 1: Update
+
+@enduml

@@ -1,0 +1,241 @@
+@startuml TravelEase_Sequence_Diagram
+
+title TravelEase System - Sequence Diagram
+
+actor "Regular User" as User
+actor "Travel Agency" as Agency
+actor "Administrator" as Admin
+participant "System" as System
+database "Database" as DB
+
+== User Registration and Login ==
+
+User -> System: Register Account
+activate System
+System -> DB: Insert User Data
+activate DB
+DB --> System: Confirmation
+deactivate DB
+System --> User: Registration Confirmation\n(OTP Sent)
+deactivate System
+
+User -> System: Verify Email (OTP)
+activate System
+System -> System: Validate OTP
+System -> DB: Update User Status
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System --> User: Email Verification Confirmation
+deactivate System
+
+User -> System: Login
+activate System
+System -> System: Validate User Data
+System -> DB: Retrieve User Data
+activate DB
+DB --> System: User Data
+deactivate DB
+System --> User: Login Confirmation\n(JWT Token)
+deactivate System
+
+== User Viewing and Booking Packages ==
+
+User -> System: View Travel Packages
+activate System
+System -> DB: Retrieve Travel Packages
+activate DB
+DB --> System: Packages Data
+deactivate DB
+System --> User: Display Travel Packages
+deactivate System
+
+User -> System: Search Packages
+activate System
+System -> DB: Search Packages
+activate DB
+DB --> System: Search Results
+deactivate DB
+System --> User: Display Search Results
+deactivate System
+
+User -> System: Book Travel Package
+activate System
+System -> DB: Check Package Availability
+activate DB
+DB --> System: Availability Status
+deactivate DB
+System -> DB: Insert Booking Data
+activate DB
+DB --> System: Booking Confirmation
+deactivate DB
+System --> User: Booking Confirmation
+deactivate System
+
+== User Making Payment ==
+
+User -> System: Process Payment
+activate System
+System -> System: Generate Payment Order
+System -> DB: Insert Payment Data
+activate DB
+DB --> System: Payment Confirmation
+deactivate DB
+System --> User: Payment Confirmation\n(Payment Link)
+deactivate System
+
+User -> System: Verify Payment
+activate System
+System -> DB: Update Payment Status
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System -> DB: Update Booking Status
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System --> User: Payment Success\n(Booking Confirmed)
+deactivate System
+
+== User Managing Wishlist ==
+
+User -> System: Add to Wishlist
+activate System
+System -> DB: Insert Wishlist Data
+activate DB
+DB --> System: Wishlist Confirmation
+deactivate DB
+System --> User: Added to Wishlist
+deactivate System
+
+User -> System: View Wishlist
+activate System
+System -> DB: Retrieve Wishlist Data
+activate DB
+DB --> System: Wishlist Data
+deactivate DB
+System --> User: Display Wishlist
+deactivate System
+
+== Agency Registration and Package Management ==
+
+Agency -> System: Register as Agency
+activate System
+System -> DB: Insert Agency Data
+activate DB
+DB --> System: Agency Registration Confirmation
+deactivate DB
+System --> Agency: Registration Confirmation\n(Pending Approval)
+deactivate System
+
+Agency -> System: Login
+activate System
+System -> System: Validate Agency Data
+System -> DB: Retrieve Agency Data
+activate DB
+DB --> System: Agency Data
+deactivate DB
+System --> Agency: Login Confirmation
+deactivate System
+
+Agency -> System: Create Travel Package
+activate System
+System -> System: Validate Package Data
+System -> DB: Insert Package Data
+activate DB
+DB --> System: Package Creation Confirmation
+deactivate DB
+System --> Agency: Package Created\n(Pending Approval)
+deactivate System
+
+Agency -> System: Edit Package
+activate System
+System -> DB: Update Package Data
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System --> Agency: Package Updated
+deactivate System
+
+Agency -> System: View Package Bookings
+activate System
+System -> DB: Retrieve Package Bookings
+activate DB
+DB --> System: Bookings Data
+deactivate DB
+System --> Agency: Display Bookings
+deactivate System
+
+== Admin Management ==
+
+Admin -> System: Login
+activate System
+System -> System: Validate Admin Data
+System -> DB: Retrieve Admin Data
+activate DB
+DB --> System: Admin Data
+deactivate DB
+System --> Admin: Login Confirmation
+deactivate System
+
+Admin -> System: Approve Agency Registration
+activate System
+System -> DB: Update Agency Status
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System --> Admin: Agency Approved
+deactivate System
+
+Admin -> System: Reject Agency Registration
+activate System
+System -> DB: Update Agency Status
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System --> Admin: Agency Rejected
+deactivate System
+
+Admin -> System: Approve Travel Package
+activate System
+System -> DB: Update Package Status
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System --> Admin: Package Approved
+deactivate System
+
+Admin -> System: Reject Travel Package
+activate System
+System -> DB: Update Package Status
+activate DB
+DB --> System: Update Confirmation
+deactivate DB
+System --> Admin: Package Rejected
+deactivate System
+
+Admin -> System: View System Statistics
+activate System
+System -> DB: Retrieve Statistics Data
+activate DB
+DB --> System: Statistics Data
+deactivate DB
+System --> Admin: Display Statistics
+deactivate System
+
+Admin -> System: Manage Users
+activate System
+System -> DB: User Management Operations
+activate DB
+DB --> System: Operation Confirmation
+deactivate DB
+System --> Admin: Operation Confirmation
+deactivate System
+
+@enduml
+
+
+
+
+
+

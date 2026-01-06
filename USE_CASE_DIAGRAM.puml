@@ -1,0 +1,176 @@
+@startuml TravelEase_UseCase_Diagram
+
+!theme plain
+skinparam handwritten false
+skinparam monochrome false
+skinparam shadowing true
+skinparam roundcorner 10
+
+skinparam actor {
+  BackgroundColor #E1F5FF
+  BorderColor #0066CC
+}
+
+skinparam usecase {
+  BackgroundColor #FFF4E6
+  BorderColor #FF8C00
+  ArrowColor #0066CC
+}
+
+skinparam package {
+  BackgroundColor #F0F0F0
+  BorderColor #666666
+}
+
+title TravelEase System - Use Case Diagram
+
+left to right direction
+
+' Actors
+actor "Regular User" as User #LightBlue
+actor "Travel Agency" as Agency #LightGreen
+actor "Administrator" as Admin #LightCoral
+
+' System Boundary
+rectangle "TravelEase System" #LightYellow {
+  
+  ' Authentication Use Cases
+  package "Authentication" {
+    usecase "Register Account" as UC1
+    usecase "Login" as UC2
+    usecase "Logout" as UC3
+    usecase "Reset Password" as UC4
+    usecase "Email Verification" as UC5
+  }
+  
+  ' User Use Cases
+  package "User Features" {
+    usecase "Browse Travel Packages" as UC6
+    usecase "Search Packages" as UC7
+    usecase "Filter Packages" as UC8
+    usecase "View Package Details" as UC9
+    usecase "View Package Itinerary" as UC10
+    usecase "View Route Map" as UC11
+    usecase "Book Travel Package" as UC12
+    usecase "Make Payment" as UC13
+    usecase "View Booking History" as UC14
+    usecase "Cancel Booking" as UC15
+    usecase "Add to Wishlist" as UC16
+    usecase "View Wishlist" as UC17
+    usecase "Remove from Wishlist" as UC18
+    usecase "Manage Profile" as UC19
+    usecase "View Booking Confirmation" as UC20
+    usecase "Download Booking PDF" as UC21
+  }
+  
+  ' Agency Use Cases
+  package "Agency Features" {
+    usecase "Register as Agency" as UC22
+    usecase "Create Travel Package" as UC23
+    usecase "Edit Package" as UC24
+    usecase "Delete Package" as UC25
+    usecase "View Own Packages" as UC26
+    usecase "Set Package Pricing" as UC27
+    usecase "Add Accommodations" as UC28
+    usecase "Add Restaurants" as UC29
+    usecase "Add Transportation" as UC30
+    usecase "Create Itinerary" as UC31
+    usecase "View Package Bookings" as UC32
+    usecase "Manage Agency Profile" as UC33
+    usecase "Upload License Documents" as UC34
+  }
+  
+  ' Admin Use Cases
+  package "Admin Features" {
+    usecase "Approve Agency Registration" as UC35
+    usecase "Reject Agency Registration" as UC36
+    usecase "View All Agencies" as UC37
+    usecase "Approve Travel Package" as UC38
+    usecase "Reject Travel Package" as UC39
+    usecase "View All Packages" as UC40
+    usecase "Manage Users" as UC41
+    usecase "View System Statistics" as UC42
+    usecase "Manage Agency Status" as UC43
+    usecase "View Booking Reports" as UC44
+  }
+}
+
+' User Relationships
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC9
+User --> UC12
+User --> UC14
+User --> UC15
+User --> UC16
+User --> UC17
+User --> UC18
+User --> UC19
+
+' Agency Relationships
+Agency --> UC1
+Agency --> UC2
+Agency --> UC3
+Agency --> UC4
+Agency --> UC22
+Agency --> UC23
+Agency --> UC24
+Agency --> UC25
+Agency --> UC26
+Agency --> UC32
+Agency --> UC33
+Agency --> UC34
+
+' Admin Relationships
+Admin --> UC2
+Admin --> UC3
+Admin --> UC35
+Admin --> UC36
+Admin --> UC37
+Admin --> UC38
+Admin --> UC39
+Admin --> UC40
+Admin --> UC41
+Admin --> UC42
+Admin --> UC43
+Admin --> UC44
+
+' Include Relationships (dotted arrow with <<include>>)
+UC1 .> UC5 : <<include>>
+UC12 .> UC13 : <<include>>
+UC23 .> UC27 : <<include>>
+UC23 .> UC28 : <<include>>
+UC23 .> UC29 : <<include>>
+UC23 .> UC30 : <<include>>
+UC23 .> UC31 : <<include>>
+
+' Extend Relationships (dotted arrow with <<extend>>)
+UC9 .> UC10 : <<extend>>
+UC9 .> UC11 : <<extend>>
+UC12 .> UC20 : <<extend>>
+UC20 .> UC21 : <<extend>>
+
+note right of UC1
+  Registration includes
+  Email Verification
+end note
+
+note right of UC12
+  Booking includes Payment
+  and extends to Confirmation
+end note
+
+note right of UC23
+  Creating package includes:
+  Pricing, Accommodations,
+  Restaurants, Transportation,
+  and Itinerary
+end note
+
+@enduml
+

@@ -1,0 +1,120 @@
+@startuml TravelEase_ClassDiagram
+
+title TravelEase - Class Diagram
+
+skinparam class {
+  BackgroundColor #E0E0E0
+  BorderColor #333333
+  ArrowColor #333333
+  AttributeFontColor #000000
+  StereotypeFontColor #000000
+}
+
+left to right direction
+
+' Classes
+class User {
+  user_id: UUID
+  email: string
+  password_hash: string
+  full_name: string
+  user_type: string
+  created_at: timestamp
+}
+
+class RegularUser {
+  user_id: UUID
+  phone: string
+  date_of_birth: date
+}
+
+class TravelAgency {
+  agency_id: UUID
+  user_id: UUID
+  agency_name: string
+  contact_person: string
+  phone: string
+  business_license_number: string
+  status: string
+  city: string
+  state: string
+}
+
+class Administrator {
+  admin_id: UUID
+  user_id: UUID
+}
+
+class Package {
+  package_id: UUID
+  agency_id: UUID
+  package_name: string
+  destination: string
+  duration_days: int
+  price: decimal
+  max_travelers: int
+  description: string
+  status: string
+  itinerary: jsonb
+  accommodation_details: jsonb
+  transportation_included: array
+}
+
+class Booking {
+  booking_id: UUID
+  package_id: UUID
+  user_id: UUID
+  customer_name: string
+  customer_email: string
+  customer_phone: string
+  travel_date: date
+  number_of_travelers: int
+  total_price: decimal
+  booking_status: string
+  payment_status: string
+  booking_reference: string
+}
+
+class Payment {
+  payment_id: UUID
+  booking_id: UUID
+  user_id: UUID
+  amount: decimal
+  payment_status: string
+  payment_method: string
+  payment_date: timestamp
+  payment_receipt: string
+}
+
+class Wishlist {
+  wishlist_id: UUID
+  user_id: UUID
+  package_id: UUID
+  created_at: timestamp
+}
+
+' Relationships
+User "1" -- "1" RegularUser : owns
+User "1" -- "0..1" TravelAgency : manages
+User "1" -- "0..1" Administrator : has
+
+TravelAgency "1" -- "0..*" Package : creates
+
+RegularUser "1" -- "0..*" Booking : makes
+Package "1" -- "0..*" Booking : includes
+
+Booking "1" -- "1" Payment : has
+
+RegularUser "1" -- "0..*" Wishlist : maintains
+Package "1" -- "0..*" Wishlist : included_in
+
+Administrator "1" -- "0..*" TravelAgency : approves
+Administrator "1" -- "0..*" Package : approves
+
+@enduml
+
+
+
+
+
+

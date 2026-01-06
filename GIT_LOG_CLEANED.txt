@@ -1,0 +1,125 @@
+9.3 Git Log
+
+Commits TravelEase Hub
+
+Commits on Oct 24, 2025
+
+  Frontend uploaded
+  81db461 - Binziya committed 18 days ago
+
+
+Commits on Oct 22, 2025
+
+  locations corrected
+  d549c86 - Binziya committed 20 days ago
+
+
+Commits on Oct 21, 2025
+
+  itinerary and price calculation
+  e9acf5c - Binziya committed 21 days ago
+
+  payment-razorpay integration
+  45b93d3 - Binziya committed 21 days ago
+
+
+Commits on Oct 08, 2025
+
+  license verification and auto itinerary generation done
+  6f590f0 - Binziya committed 34 days ago
+
+  filters added partially
+  a05740f - Binziya committed 34 days ago
+
+
+Commits on Sep 12, 2025
+
+  destination update
+  ae6e9ba - Binziya committed 60 days ago
+
+
+Commits on Sep 11, 2025
+
+  package add automatically
+  8b51ab4 - Binziya committed 61 days ago
+
+  license verified
+  7a38760 - Binziya committed 61 days ago
+
+
+Commits on Sep 10, 2025
+
+  license verification added
+  3c6f4b0 - Binziya committed 62 days ago
+
+
+Commits on Sep 09, 2025
+
+  Packages listed, searching done
+  d244af7 - Binziya committed 63 days ago
+
+  searching updated
+  33e07a3 - Binziya committed 63 days ago
+
+
+Commits on Sep 08, 2025
+
+  package adding and approval or rejection management done
+  8c229cd - Binziya committed 64 days ago
+
+
+Commits on Aug 19, 2025
+
+  Agency registration with admin approval
+  e022a7e - Binziya committed 84 days ago
+
+
+Commits on Aug 18, 2025
+
+  registration and login updated
+  1ece8dc - Binziya committed 85 days ago
+
+
+Commits on Aug 15, 2025
+
+  more validation added
+  9efe006 - Binziya committed 88 days ago
+
+
+Commits on Aug 12, 2025
+
+  mail verification done
+  776fa46 - Binziya committed 91 days ago
+
+
+Commits on Aug 11, 2025
+
+  google auth updated
+  f50611f - Binziya committed 92 days ago
+
+  Track mp4 with Git LFS
+  35ab86a - Binziya committed 92 days ago
+
+
+Commits on Aug 08, 2025
+
+  my project documents
+  f0b05db - Binziya committed 95 days ago
+
+  Registration validation added
+  94f603b - Binziya committed 95 days ago
+
+
+Commits on Aug 07, 2025
+
+  Registration Updated
+  2cb7fdc - Binziya committed 96 days ago
+
+
+Commits on Aug 06, 2025
+
+  Sign up with google completed
+  21f3be2 - Binziya committed 97 days ago
+
+
+

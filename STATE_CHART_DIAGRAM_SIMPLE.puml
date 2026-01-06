@@ -1,0 +1,55 @@
+@startuml TravelEase_Statechart
+
+title TravelEase System - State Chart Diagram
+
+[*] --> StartScreen
+
+StartScreen --> Login : select "Login"
+StartScreen --> Register : select "Register"
+
+Login --> UserDashboard : if Regular User
+Login --> AgencyDashboard : if Travel Agency
+Login --> AdminDashboard : if Administrator
+
+Register --> UserDashboard : if Traveler
+Register --> AgencyDashboard : if Company
+Register --> UserDashboard : if Agency
+
+state UserDashboard {
+  [*] --> BrowsePackages
+  BrowsePackages --> BookPackage
+  BrowsePackages --> SearchPackages
+  BrowsePackages --> ViewWishlist
+  BookPackage --> ProcessPayment
+  ProcessPayment --> ViewBookings
+  ViewBookings --> ManageProfile
+  ManageProfile --> [*]
+}
+
+state AgencyDashboard {
+  [*] --> ViewBookings
+  ViewBookings --> CreatePackage
+  CreatePackage --> ManagePackages
+  ManagePackages --> [*]
+}
+
+state AdminDashboard {
+  [*] --> ApproveAgency
+  ApproveAgency --> ApprovePackage
+  ApprovePackage --> ViewStatistics
+  ViewStatistics --> [*]
+}
+
+UserDashboard --> Logout
+AgencyDashboard --> Logout
+AdminDashboard --> Logout
+
+Logout --> [*]
+
+@enduml
+
+
+
+
+
+

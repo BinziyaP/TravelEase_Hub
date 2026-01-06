@@ -1,0 +1,89 @@
+@startuml TravelEase_Sequence_Diagram
+
+title TravelEase System - Sequence Diagram
+
+actor "Regular User" as User
+actor "Travel Agency" as Agency
+actor "Administrator" as Admin
+participant "System" as System
+database "Database" as DB
+
+== User Registration and Login ==
+
+User -> System: Register Account
+activate System
+System -> DB: Insert User Data
+DB --> System: Confirmation
+System --> User: Registration Confirmation
+deactivate System
+
+User -> System: Login
+activate System
+System -> System: Validate User Data
+System -> DB: Retrieve User Data
+DB --> System: User Data
+System --> User: Login Confirmation
+deactivate System
+
+== User Booking Package ==
+
+User -> System: View Travel Packages
+activate System
+System -> DB: Retrieve Travel Packages
+DB --> System: Packages Data
+System --> User: Display Travel Packages
+deactivate System
+
+User -> System: Book Travel Package
+activate System
+System -> DB: Insert Booking Data
+DB --> System: Booking Confirmation
+System --> User: Booking Confirmation
+deactivate System
+
+User -> System: Process Payment
+activate System
+System -> DB: Insert Payment Data
+DB --> System: Payment Confirmation
+System --> User: Payment Confirmation
+deactivate System
+
+== Agency Management ==
+
+Agency -> System: Register as Agency
+activate System
+System -> DB: Insert Agency Data
+DB --> System: Agency Registration Confirmation
+System --> Agency: Registration Confirmation
+deactivate System
+
+Agency -> System: Create Travel Package
+activate System
+System -> DB: Insert Package Data
+DB --> System: Package Creation Confirmation
+System --> Agency: Package Created
+deactivate System
+
+== Admin Management ==
+
+Admin -> System: Approve Agency Registration
+activate System
+System -> DB: Update Agency Status
+DB --> System: Update Confirmation
+System --> Admin: Agency Approved
+deactivate System
+
+Admin -> System: Approve Travel Package
+activate System
+System -> DB: Update Package Status
+DB --> System: Update Confirmation
+System --> Admin: Package Approved
+deactivate System
+
+@enduml
+
+
+
+
+
+

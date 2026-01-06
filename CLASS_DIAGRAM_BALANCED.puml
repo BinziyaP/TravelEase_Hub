@@ -1,0 +1,98 @@
+@startuml TravelEase_ClassDiagram
+
+title TravelEase - Class Diagram
+
+skinparam class {
+  BackgroundColor #E0E0E0
+  BorderColor #333333
+  ArrowColor #333333
+}
+
+skinparam package {
+  BackgroundColor #F0F0F0
+  BorderColor #666666
+}
+
+' User Management
+class User {
+  - user_id: UUID
+  - email: string
+  - password_hash: string
+  - full_name: string
+  - user_type: string
+}
+
+class RegularUser {
+  - user_id: UUID
+  - phone: string
+}
+
+class TravelAgency {
+  - agency_id: UUID
+  - user_id: UUID
+  - agency_name: string
+  - status: string
+}
+
+class Administrator {
+  - admin_id: UUID
+  - user_id: UUID
+}
+
+' Package & Booking
+class Package {
+  - package_id: UUID
+  - agency_id: UUID
+  - package_name: string
+  - destination: string
+  - price: decimal
+  - status: string
+}
+
+class Booking {
+  - booking_id: UUID
+  - package_id: UUID
+  - user_id: UUID
+  - travel_date: date
+  - total_price: decimal
+  - booking_status: string
+}
+
+class Payment {
+  - payment_id: UUID
+  - booking_id: UUID
+  - amount: decimal
+  - payment_status: string
+}
+
+class Wishlist {
+  - wishlist_id: UUID
+  - user_id: UUID
+  - package_id: UUID
+}
+
+' Relationships
+User "1" -- "1" RegularUser : owns
+User "1" -- "0..1" TravelAgency : manages
+User "1" -- "0..1" Administrator : has
+
+TravelAgency "1" -- "0..*" Package : creates
+
+RegularUser "1" -- "0..*" Booking : makes
+Package "1" -- "0..*" Booking : includes
+
+Booking "1" -- "1" Payment : has
+
+RegularUser "1" -- "0..*" Wishlist : maintains
+Package "1" -- "0..*" Wishlist : included_in
+
+Administrator "1" -- "0..*" TravelAgency : approves
+Administrator "1" -- "0..*" Package : approves
+
+@enduml
+
+
+
+
+
+

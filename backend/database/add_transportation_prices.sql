@@ -27,3 +27,9 @@ CREATE INDEX IF NOT EXISTS idx_packages_transportation_prices_gin ON public.pack
 
 
 
+
+
+
+
+
+

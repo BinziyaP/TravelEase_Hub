@@ -1,0 +1,39 @@
+@startuml TravelEase_ActivityDiagram
+
+title TravelEase System - Activity Diagram
+
+start
+
+partition "User" {
+  :Open Website;
+  :Login or Register;
+}
+
+partition "Regular User" {
+  :Choose Option;
+  note right: Option 1: Book Travel Package\nOption 2: Browse Packages
+
+  if (Option Chosen) then (Option 1: Book Travel Package)
+    :View Travel Packages;
+    :Select Package;
+    :Book Travel Package;
+    :Process Payment;
+    :Confirm Booking;
+    :View Booking Details;
+  else (Option 2: Browse Packages)
+    :Search Packages;
+    :Filter Packages;
+    :View Package Details;
+    :Add to Wishlist;
+  endif
+}
+
+stop
+
+@enduml
+
+
+
+
+
+
