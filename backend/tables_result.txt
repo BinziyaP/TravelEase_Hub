@@ -1,0 +1,6 @@
+Table profiles EXISTS
+Table agencies EXISTS
+Table packages EXISTS
+Table travel_packages ERROR: relation "public.travel_packages" does not exist
+Table agency_approval_history EXISTS
+Table bookings EXISTS

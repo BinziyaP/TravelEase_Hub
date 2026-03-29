@@ -146,10 +146,11 @@ router.put('/user/profile', authenticateToken, async (req, res) => {
 router.get('/agency/packages', authenticateToken, requireAgency, async (req, res) => {
   try {
     const supabase = getSupabase();
+    const { data: agency } = await supabase.from('agencies').select('id').eq('user_id', req.user.id).single();
     const { data: packages, error } = await supabase
-      .from('travel_packages')
+      .from('packages')
       .select('*')
-      .eq('agency_id', req.user.id)
+      .eq('agency_id', agency ? agency.id : req.user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -167,11 +168,12 @@ router.post('/agency/packages', authenticateToken, requireAgency, async (req, re
   try {
     const { name, description, destination, duration_days, price, max_travelers, features } = req.body;
     const supabase = getSupabase();
+    const { data: agency } = await supabase.from('agencies').select('id').eq('user_id', req.user.id).single();
 
     const { data: newPackage, error } = await supabase
-      .from('travel_packages')
+      .from('packages')
       .insert({
-        agency_id: req.user.id,
+        agency_id: agency ? agency.id : req.user.id,
         name,
         description,
         destination,
@@ -206,9 +208,9 @@ router.get('/agency/bookings', authenticateToken, requireAgency, async (req, res
       .from('bookings')
       .select(`
         *,
-        travel_packages!inner(agency_id)
+        packages!inner(agency_id)
       `)
-      .eq('travel_packages.agency_id', req.user.id)
+      .eq('packages.agency_id', (await supabase.from('agencies').select('id').eq('user_id', req.user.id).single()).data?.id || req.user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -339,7 +341,7 @@ router.get('/admin/packages', authenticateToken, requireAdmin, async (req, res) 
   try {
     const supabase = getSupabase();
     const { data: packages, error } = await supabase
-      .from('travel_packages')
+      .from('packages')
       .select('*')
       .order('created_at', { ascending: false });
 

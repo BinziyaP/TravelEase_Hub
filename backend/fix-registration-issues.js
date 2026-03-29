@@ -16,7 +16,7 @@ console.log('🚀 Starting Registration Issues Fix...\n');
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL, 
+  process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
     auth: {
@@ -32,10 +32,10 @@ console.log('✅ Service Role Key:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Fo
 async function fixRegistrationIssues() {
   try {
     console.log('\n📋 Step 1: Checking current schema...\n');
-    
+
     // Check existing columns in users table
     const { data: usersData, error: usersError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .limit(0);
 
@@ -47,7 +47,7 @@ async function fixRegistrationIssues() {
 
     // Check if pending_users table exists
     console.log('\n📋 Step 2: Checking pending_users table...\n');
-    
+
     const { data: pendingData, error: pendingError } = await supabase
       .from('pending_users')
       .select('*')
@@ -56,7 +56,7 @@ async function fixRegistrationIssues() {
     if (pendingError) {
       console.log('❌ Pending users table missing or has issues:', pendingError.message);
       console.log('🔧 Creating pending_users table...\n');
-      
+
       // Create pending_users table
       const createTableSQL = `
         -- Create pending_users table for email verification with OTP
@@ -85,8 +85,8 @@ async function fixRegistrationIssues() {
             FOR ALL USING (true);
       `;
 
-      const { error: createError } = await supabase.rpc('exec_sql', { 
-        sql: createTableSQL 
+      const { error: createError } = await supabase.rpc('exec_sql', {
+        sql: createTableSQL
       });
 
       if (createError) {
@@ -101,7 +101,7 @@ async function fixRegistrationIssues() {
 
     // Check if users table has the right columns
     console.log('\n📋 Step 3: Checking users table columns...\n');
-    
+
     // Try to access different column names to see what exists
     const columnChecks = [
       { name: 'full_name', exists: false },
@@ -114,10 +114,10 @@ async function fixRegistrationIssues() {
     for (let check of columnChecks) {
       try {
         const { error } = await supabase
-          .from('users')
+          .from('profiles')
           .select(check.name)
           .limit(1);
-        
+
         if (!error) {
           check.exists = true;
           console.log(`✅ Column '${check.name}' exists`);
@@ -131,7 +131,7 @@ async function fixRegistrationIssues() {
 
     // Step 4: Test registration flow
     console.log('\n📋 Step 4: Testing registration components...\n');
-    
+
     // Test email service
     try {
       const { sendOTPEmail } = require('./utils/emailService');
@@ -152,17 +152,17 @@ async function fixRegistrationIssues() {
     console.log('\n🎯 Summary and Recommendations:\n');
     console.log('1. ✅ Environment variables are loaded');
     console.log('2. ✅ Supabase connection is working');
-    
+
     if (pendingError) {
       console.log('3. ❌ pending_users table needs to be created manually');
       console.log('   📝 Run the SQL in create-pending-users-table.sql in your Supabase dashboard');
     } else {
       console.log('3. ✅ pending_users table exists');
     }
-    
+
     console.log('4. 🔧 Check column name consistency in your code');
     console.log('5. 🔧 Remove external email validation dependency');
-    
+
   } catch (error) {
     console.error('❌ Fix script error:', error);
   }

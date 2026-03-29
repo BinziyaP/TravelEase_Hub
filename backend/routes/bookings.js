@@ -31,7 +31,7 @@ router.get('/', authenticateToken, async (req, res) => {
       .from('bookings')
       .select(`
         *,
-        travel_packages (
+        packages (
           id,
           name,
           destination,
@@ -76,7 +76,7 @@ router.get('/:bookingId', authenticateToken, async (req, res) => {
       .from('bookings')
       .select(`
         *,
-        travel_packages (
+        packages (
           id,
           name,
           destination,
@@ -139,7 +139,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Check if package exists and has available slots
     const { data: package, error: packageError } = await supabase
-      .from('travel_packages')
+      .from('packages')
       .select('id, name, price, available_slots, max_travelers, status')
       .eq('id', package_id)
       .single();
@@ -197,7 +197,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Update available slots
     const { error: updateError } = await supabase
-      .from('travel_packages')
+      .from('packages')
       .update({ 
         available_slots: package.available_slots - number_of_travelers 
       })
@@ -233,7 +233,7 @@ router.put('/:bookingId/cancel', authenticateToken, async (req, res) => {
     // Get booking details first
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
-      .select('*, travel_packages(available_slots)')
+      .select('*, packages(available_slots)')
       .eq('id', bookingId)
       .eq('user_id', req.user.id)
       .single();
@@ -271,9 +271,9 @@ router.put('/:bookingId/cancel', authenticateToken, async (req, res) => {
 
     // Restore available slots
     const { error: slotError } = await supabase
-      .from('travel_packages')
+      .from('packages')
       .update({ 
-        available_slots: booking.travel_packages.available_slots + booking.number_of_travelers 
+        available_slots: booking.packages.available_slots + booking.number_of_travelers 
       })
       .eq('id', booking.package_id);
 

@@ -41,7 +41,7 @@ const getSupabase = () => {
 const testSupabaseConnection = async () => {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('count')
       .limit(1);
 

@@ -34,8 +34,8 @@ const geocodeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Apply rate limiting to all geocoding routes
-router.use(geocodeLimiter);
+// Apply rate limiting ONLY to geocoding routes
+router.use('/geocode', geocodeLimiter);
 
 /**
  * GET /api/geocode
@@ -56,7 +56,7 @@ router.get('/geocode', async (req, res) => {
 
     // Clean and prepare the place name
     const cleanPlace = place.trim();
-    
+
     // Basic validation - reject obviously non-Indian places
     const nonIndianIndicators = [
       'new york', 'london', 'paris', 'tokyo', 'sydney', 'melbourne', 'toronto',
@@ -109,31 +109,31 @@ router.get('/geocode', async (req, res) => {
 
     // Find the best match (prioritize exact matches and Indian results)
     let bestMatch = data[0]; // Default to first result
-    
+
     // Look for exact matches or results that contain the place name
     for (const result of data) {
       const displayName = result.display_name.toLowerCase();
       const placeName = cleanPlace.toLowerCase();
-      
+
       // Check if this result is more relevant
-      if (displayName.includes(placeName) && 
-          (displayName.includes('india') || displayName.includes('kerala') || 
-           displayName.includes('tamil nadu') || displayName.includes('karnataka') ||
-           displayName.includes('maharashtra') || displayName.includes('gujarat') ||
-           displayName.includes('rajasthan') || displayName.includes('uttar pradesh') ||
-           displayName.includes('west bengal') || displayName.includes('andhra pradesh') ||
-           displayName.includes('telangana') || displayName.includes('bihar') ||
-           displayName.includes('odisha') || displayName.includes('madhya pradesh') ||
-           displayName.includes('chhattisgarh') || displayName.includes('jharkhand') ||
-           displayName.includes('assam') || displayName.includes('manipur') ||
-           displayName.includes('meghalaya') || displayName.includes('mizoram') ||
-           displayName.includes('nagaland') || displayName.includes('tripura') ||
-           displayName.includes('sikkim') || displayName.includes('arunachal pradesh') ||
-           displayName.includes('himachal pradesh') || displayName.includes('uttarakhand') ||
-           displayName.includes('punjab') || displayName.includes('haryana') ||
-           displayName.includes('goa') || displayName.includes('delhi') ||
-           displayName.includes('chandigarh') || displayName.includes('puducherry') ||
-           displayName.includes('jammu and kashmir') || displayName.includes('ladakh'))) {
+      if (displayName.includes(placeName) &&
+        (displayName.includes('india') || displayName.includes('kerala') ||
+          displayName.includes('tamil nadu') || displayName.includes('karnataka') ||
+          displayName.includes('maharashtra') || displayName.includes('gujarat') ||
+          displayName.includes('rajasthan') || displayName.includes('uttar pradesh') ||
+          displayName.includes('west bengal') || displayName.includes('andhra pradesh') ||
+          displayName.includes('telangana') || displayName.includes('bihar') ||
+          displayName.includes('odisha') || displayName.includes('madhya pradesh') ||
+          displayName.includes('chhattisgarh') || displayName.includes('jharkhand') ||
+          displayName.includes('assam') || displayName.includes('manipur') ||
+          displayName.includes('meghalaya') || displayName.includes('mizoram') ||
+          displayName.includes('nagaland') || displayName.includes('tripura') ||
+          displayName.includes('sikkim') || displayName.includes('arunachal pradesh') ||
+          displayName.includes('himachal pradesh') || displayName.includes('uttarakhand') ||
+          displayName.includes('punjab') || displayName.includes('haryana') ||
+          displayName.includes('goa') || displayName.includes('delhi') ||
+          displayName.includes('chandigarh') || displayName.includes('puducherry') ||
+          displayName.includes('jammu and kashmir') || displayName.includes('ladakh'))) {
         bestMatch = result;
         break;
       }
@@ -169,7 +169,7 @@ router.get('/geocode', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Geocoding error:', error);
-    
+
     // Handle specific error types
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       return res.status(503).json({

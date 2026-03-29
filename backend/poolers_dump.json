@@ -1,0 +1,130 @@
+[
+  {
+    "id": "06380bb1-6d7a-4ea6-a0f8-f1739760dcb8",
+    "group_id": null,
+    "user_id": "b910b907-f161-45f1-a0bf-2a5430278b43",
+    "role": "member",
+    "status": "pending",
+    "budget_limit": 25000,
+    "preferences": {
+      "luxury": 4,
+      "culture": 7,
+      "adventure": 8
+    },
+    "compatibility_score": null,
+    "joined_at": null,
+    "created_at": "2026-03-24T06:05:40.354645+00:00"
+  },
+  {
+    "id": "00fd488b-a62e-4e32-9cb2-0b24838cfa11",
+    "group_id": null,
+    "user_id": "171e39fc-bc3e-4d0b-a955-e52f1dd31b0f",
+    "role": "member",
+    "status": "pending",
+    "budget_limit": 25000,
+    "preferences": {
+      "luxury": 4,
+      "culture": 7,
+      "adventure": 8
+    },
+    "compatibility_score": null,
+    "joined_at": null,
+    "created_at": "2026-03-24T06:05:40.541249+00:00"
+  },
+  {
+    "id": "8c292afc-f3b1-47d2-ba7f-c3ac2c606083",
+    "group_id": null,
+    "user_id": "38dd33a6-3fac-4fe1-8c5a-68398d60cacb",
+    "role": "member",
+    "status": "pending",
+    "budget_limit": 25000,
+    "preferences": {
+      "luxury": 4,
+      "culture": 7,
+      "adventure": 8
+    },
+    "compatibility_score": null,
+    "joined_at": null,
+    "created_at": "2026-03-24T06:05:40.727356+00:00"
+  },
+  {
+    "id": "51f8b77d-153d-4808-8f89-ba1d4dc31013",
+    "group_id": null,
+    "user_id": "7f27e578-8474-4000-968a-80a58c861f1c",
+    "role": "member",
+    "status": "pending",
+    "budget_limit": 25000,
+    "preferences": {
+      "luxury": 4,
+      "culture": 7,
+      "adventure": 8
+    },
+    "compatibility_score": null,
+    "joined_at": null,
+    "created_at": "2026-03-24T06:05:40.911283+00:00"
+  },
+  {
+    "id": "2c7ca21c-5549-4a4b-bb0d-3f9100a8d916",
+    "group_id": "f1638561-dc78-42bb-bbb6-ec6fc61d349b",
+    "user_id": "be984d6e-6d47-4779-9b89-2b5ca5381b4f",
+    "role": "member",
+    "status": "joined",
+    "budget_limit": 25000,
+    "preferences": {
+      "luxury": 4,
+      "culture": 7,
+      "adventure": 8
+    },
+    "compatibility_score": 100,
+    "joined_at": null,
+    "created_at": "2026-03-24T06:05:40.152158+00:00"
+  },
+  {
+    "id": "0f692ce1-8a29-4fe9-8da4-bd9376f85f9a",
+    "group_id": "f0e06010-d982-42e8-ad6d-9833f8484ab3",
+    "user_id": "d10c9f5e-2c2b-4845-b322-b0b29d26fd05",
+    "role": "member",
+    "status": "joined",
+    "budget_limit": 9000,
+    "preferences": {
+      "luxury": 2,
+      "culture": 2,
+      "adventure": 1
+    },
+    "compatibility_score": 100,
+    "joined_at": null,
+    "created_at": "2026-03-24T07:33:06.796001+00:00"
+  },
+  {
+    "id": "766902df-a6de-47a7-b2b8-a98b3720e1e9",
+    "group_id": "9706d871-6b0a-4c21-b883-57869c5a8283",
+    "user_id": "31b53f74-5265-40eb-9fae-1671791e5f78",
+    "role": "member",
+    "status": "joined",
+    "budget_limit": 76000,
+    "preferences": {
+      "luxury": 8,
+      "culture": 2,
+      "adventure": 4
+    },
+    "compatibility_score": 100,
+    "joined_at": null,
+    "created_at": "2026-03-24T07:40:51.234426+00:00"
+  },
+  {
+    "id": "213bc08c-1e13-48ad-9328-34c4804489b0",
+    "group_id": "9706d871-6b0a-4c21-b883-57869c5a8283",
+    "user_id": "d706f36e-897f-4d93-b5b5-6e65200f5310",
+    "role": "member",
+    "status": "joined",
+    "budget_limit": 76000,
+    "preferences": {
+      "luxury": 8,
+      "culture": 2,
+      "adventure": 4
+    },
+    "compatibility_score": 100,
+    "joined_at": null,
+    "created_at": "2026-03-24T07:38:50.858979+00:00"
+  }
+]

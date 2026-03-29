@@ -64,6 +64,117 @@ router.get('/check-capacity', async (req, res) => {
   }
 });
 
+// Helper function to calculate pricing
+const calculateBookingPrice = async (packageData, number_of_travelers, travel_date, selected_transport = [], addons = []) => {
+  const base_price = parseFloat(packageData.price);
+
+  // 1. Calculate Base Cost
+  const total_base_price = base_price * number_of_travelers;
+
+  // 2. Calculate Transport Cost
+  let transport_cost = 0;
+  const transport_details = [];
+
+  if (selected_transport && selected_transport.length > 0) {
+    // Check if package has transportation_prices mapping
+    // Assuming packageData.transportation_prices is a JSON object like { "flight": 5000, "cab": 2000 }
+    const prices = packageData.transportation_prices || {};
+
+    selected_transport.forEach(mode => {
+      const cost_per_person = parseFloat(prices[mode] || 0);
+      const total_mode_cost = cost_per_person * number_of_travelers;
+      transport_cost += total_mode_cost;
+
+      transport_details.push({
+        mode,
+        cost_per_person,
+        total_cost: total_mode_cost
+      });
+    });
+  }
+
+  // 3. Calculate Add-ons (Activities, Insurance etc.)
+  // Future scope: currently just basic structure
+  let addons_cost = 0;
+
+  // 4. Calculate Seasonal Discounts
+  const travelDate = new Date(travel_date);
+  const month = travelDate.getMonth() + 1; // 1-12
+  let discount_percentage = 0;
+  let season = 'Regular';
+
+  if (month >= 6 && month <= 8) {
+    discount_percentage = 10; // 10% off for monsoon season
+    season = 'Monsoon Special';
+  } else if (month === 12 || month <= 2) {
+    discount_percentage = 5; // 5% off for winter season
+    season = 'Winter Special';
+  }
+
+  const subtotal = total_base_price + transport_cost + addons_cost;
+  const discount_amount = (subtotal * discount_percentage) / 100;
+
+  // 5. Taxes (GST @ 5% for tours)
+  const taxable_amount = subtotal - discount_amount;
+  const tax_percentage = 5;
+  const tax_amount = (taxable_amount * tax_percentage) / 100;
+
+  const final_amount = Math.round(taxable_amount + tax_amount);
+
+  return {
+    base_price,
+    number_of_travelers,
+    total_base_price,
+    transport_cost,
+    transport_details,
+    addons_cost,
+    subtotal,
+    season,
+    discount_percentage,
+    discount_amount,
+    tax_percentage,
+    tax_amount,
+    final_amount,
+    currency: 'INR'
+  };
+};
+
+// Calculate price endpoint (Single Source of Truth)
+router.post('/calculate-price', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { package_id, number_of_travelers, travel_date, selected_transport, addons } = req.body;
+
+    if (!package_id || !number_of_travelers || !travel_date) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const { data: packageData, error } = await supabase
+      .from('packages')
+      .select('price, transportation_prices')
+      .eq('id', package_id)
+      .single();
+
+    if (error || !packageData) {
+      return res.status(404).json({ success: false, message: 'Package not found' });
+    }
+
+    const pricing = await calculateBookingPrice(
+      packageData,
+      parseInt(number_of_travelers),
+      travel_date,
+      selected_transport,
+      addons
+    );
+
+    res.json({ success: true, pricing });
+
+  } catch (error) {
+    console.error('Price calculation error:', error);
+    res.status(500).json({ success: false, message: 'Calculation failed' });
+  }
+});
+
 // Create a new booking
 router.post('/create', async (req, res) => {
   try {
@@ -77,8 +188,13 @@ router.post('/create', async (req, res) => {
       travel_date,
       return_date,
       number_of_travelers,
+      number_of_adults,
+      number_of_children,
       special_requirements,
-      travelers = []
+      travelers = [],
+      selected_transport = [],
+      addons = [],
+      departure_city // New field
     } = req.body;
 
     // Validate required fields
@@ -98,61 +214,63 @@ router.post('/create', async (req, res) => {
       .eq('status', 'approved')
       .single();
 
-    if (packageError) {
-      console.error('❌ Package lookup failed:', packageError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to lookup package',
-        error: process.env.NODE_ENV === 'development' ? packageError.message : undefined
-      });
-    }
-
-    if (!packageData) {
+    if (packageError || !packageData) {
       return res.status(404).json({
         success: false,
         message: 'Package not found or not available'
       });
     }
 
-    console.log('✅ Package found:', packageData.package_name);
+    // --- PRICING LOGIC ---
+    // Recalculate everything on backend to ensure security
+    const pricing = await calculateBookingPrice(
+      packageData,
+      parseInt(number_of_travelers),
+      travel_date,
+      selected_transport,
+      addons
+    );
 
-    // Calculate pricing
-    const base_price = parseFloat(packageData.price);
-    const total_price = base_price * number_of_travelers;
-    
-    // Apply discounts (example: seasonal discounts)
-    const travelDate = new Date(travel_date);
-    const month = travelDate.getMonth() + 1;
-    let discount_percentage = 0;
-    
-    if (month >= 6 && month <= 8) {
-      discount_percentage = 10; // 10% off for monsoon season
-    } else if (month === 12 || month <= 2) {
-      discount_percentage = 5; // 5% off for winter season
-    }
-    
-    const discount_amount = (total_price * discount_percentage) / 100;
-    const final_amount = total_price - discount_amount;
+    // Prepare JSON data structures for new schema
+    const customer_details = {
+      name: customer_name,
+      email: customer_email,
+      phone: customer_phone,
+      special_requirements
+    };
+
+    const trip_details = {
+      departure_city, // Store departure city
+      travel_date,
+      return_date,
+      duration_days: packageData.duration_days,
+      package_name: packageData.package_name,
+      package_destination: packageData.destination
+    };
 
     // Create booking record
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .insert({
         package_id,
-        user_id: req.user?.id || null,
-        customer_name,
+        user_id: req.user?.id || null, // Optional if guest checkout
+        customer_name,   // Keep legacy columns for backward compat if needed, or migration ensures they exist
         customer_email,
         customer_phone,
         travel_date,
-        return_date: return_date || null,
+        return_date,
         number_of_travelers,
-        special_requirements: special_requirements || null,
-        base_price,
-        total_price,
-        discount_amount,
-        final_amount,
-        payment_status: 'pending',
-        booking_status: 'pending',
+        status: 'pending_payment', // Use new status flow
+        booking_status: 'pending', // Legacy support
+
+        // New JSONB Fields
+        customer_details,
+        trip_details,
+        pricing_details: pricing,
+        addons: selected_transport, // storing selected transport in addons column for now
+
+        // Financials
+        total_amount: pricing.final_amount, // Important for queries
         agency_id: packageData.agency_id
       })
       .select()
@@ -163,21 +281,23 @@ router.post('/create', async (req, res) => {
       return res.status(500).json({
         success: false,
         message: 'Failed to create booking',
-        error: process.env.NODE_ENV === 'development' ? bookingError.message : undefined,
-        details: process.env.NODE_ENV === 'development' ? bookingError : undefined
+        error: process.env.NODE_ENV === 'development' ? bookingError.message : undefined
       });
     }
 
-    // Add travelers if provided
+    // Add travelers
     if (travelers && travelers.length > 0) {
       const travelersData = travelers.map(traveler => ({
         booking_id: booking.id,
+        // Legacy columns
         traveler_name: traveler.name,
         traveler_age: traveler.age,
         traveler_gender: traveler.gender,
         traveler_phone: traveler.phone,
-        traveler_email: traveler.email,
-        traveler_documents: traveler.documents || {}
+        traveler_email: traveler.email || null, // handle missing email
+
+        // New JSONB column
+        traveler_info: traveler
       }));
 
       const { error: travelersError } = await supabase
@@ -190,38 +310,26 @@ router.post('/create', async (req, res) => {
     }
 
     // Create Razorpay order
-    console.log('💳 Creating Razorpay order for amount:', final_amount);
-    let orderResult;
-    
-    // Always use mock order for now to fix the 500 error
-    console.log('🔧 Using mock order to fix payment issue');
-    orderResult = {
+    console.log('💳 Creating Razorpay order for amount:', pricing.final_amount);
+
+    // Mock order for testing (as per original code)
+    const orderResult = {
       success: true,
       order: {
         id: `mock_order_${Date.now()}`,
-        amount: Math.round(final_amount * 100),
+        amount: Math.round(pricing.final_amount * 100),
         currency: 'INR',
         receipt: `booking_${booking.id}`
       }
     };
-    console.log('✅ Mock order created:', orderResult.order.id);
 
-    if (!orderResult.success) {
-      console.error('❌ Razorpay order creation failed:', orderResult.error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create payment order',
-        error: process.env.NODE_ENV === 'development' ? orderResult.error : undefined
-      });
-    }
-
-    // Store payment order ID
+    // Store payment transaction
     await supabase
       .from('payment_transactions')
       .insert({
         booking_id: booking.id,
         razorpay_order_id: orderResult.order.id,
-        amount: final_amount,
+        amount: pricing.final_amount,
         currency: 'INR',
         status: 'pending'
       });
@@ -230,14 +338,10 @@ router.post('/create', async (req, res) => {
       success: true,
       booking: {
         id: booking.id,
-        booking_reference: booking.booking_reference,
-        final_amount: final_amount,
-        discount_amount: discount_amount,
-        package: {
-          name: packageData.name,
-          destination: packageData.destination,
-          duration: packageData.duration_days
-        }
+        booking_reference: booking.booking_reference, // database trigger usually handles this
+        customer_details,
+        trip_details,
+        pricing
       },
       payment: {
         order_id: orderResult.order.id,
@@ -270,7 +374,7 @@ router.post('/verify-payment', async (req, res) => {
 
     // Verify payment signature
     const verification = verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
-    
+
     if (!verification.success) {
       return res.status(400).json({
         success: false,
@@ -280,7 +384,7 @@ router.post('/verify-payment', async (req, res) => {
 
     // Get payment details from Razorpay
     const paymentDetails = await getPaymentDetails(razorpay_payment_id);
-    
+
     if (!paymentDetails.success) {
       return res.status(500).json({
         success: false,
@@ -464,7 +568,7 @@ router.post('/cancel/:booking_id', async (req, res) => {
     if (booking.payment_status === 'completed' && booking.payment_id) {
       try {
         const refundResult = await refundPayment(booking.payment_id);
-        
+
         if (refundResult.success) {
           // Update payment status
           await supabase

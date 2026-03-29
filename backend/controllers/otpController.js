@@ -25,7 +25,7 @@ const checkEmail = async (req, res) => {
 
         // Check if email already exists in users table
         const { data: existingUser, error: checkError } = await supabase
-            .from('users')
+            .from('profiles')
             .select('email')
             .eq('email', email.toLowerCase())
             .single();
@@ -85,7 +85,7 @@ const sendOTP = async (req, res) => {
 
         // Check if email already exists
         const { data: existingUser } = await supabase
-            .from('users')
+            .from('profiles')
             .select('email')
             .eq('email', normalizedEmail)
             .single();
@@ -130,7 +130,7 @@ const sendOTP = async (req, res) => {
 
         // Send OTP email
         const emailResult = await sendOTPEmail(normalizedEmail, otp, full_name);
-        
+
         if (!emailResult.success) {
             // Clean up OTP if email failed
             await supabase
@@ -223,7 +223,7 @@ const verifyOTPAndCreateUser = async (req, res) => {
 
         // Verify OTP
         const isValidOTP = await verifyOTP(otp, otpRecord.otp_hash);
-        
+
         if (!isValidOTP) {
             // Increment attempts
             await supabase
@@ -232,7 +232,7 @@ const verifyOTPAndCreateUser = async (req, res) => {
                 .eq('email', normalizedEmail);
 
             const remainingAttempts = otpRecord.max_attempts - (otpRecord.attempts + 1);
-            
+
             return res.status(400).json({
                 success: false,
                 message: 'Invalid OTP',
@@ -242,7 +242,7 @@ const verifyOTPAndCreateUser = async (req, res) => {
 
         // OTP is valid, create user profile
         const { data: newUser, error: createError } = await supabase
-            .from('users')
+            .from('profiles')
             .insert({
                 email: normalizedEmail,
                 name: full_name, // Using 'name' column as per your schema

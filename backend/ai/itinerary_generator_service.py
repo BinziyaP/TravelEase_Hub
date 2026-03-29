@@ -5,15 +5,26 @@ import json
 from typing import List, Dict, Any
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Optional OpenAI support (fallback to heuristic if not configured)
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-try:
-	import openai  # type: ignore
-	if OPENAI_API_KEY:
-		openai.api_key = OPENAI_API_KEY
-except Exception:  # pragma: no cover
-	openai = None  # type: ignore
+import google.generativeai as genai
+
+load_dotenv()
+
+# Configure Gemini
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+model = None
+if GEMINI_API_KEY:
+
+	try:
+		genai.configure(api_key=GEMINI_API_KEY)
+		model = genai.GenerativeModel('gemini-flash-latest')
+	except Exception as e:
+		print(f"Gemini Config Error: {e}")
+		model = None
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'], 
@@ -282,20 +293,16 @@ def calculate_total_route_distance(attractions: List[Dict[str, Any]], accommodat
 	return total_distance
 
 
-def summarize_with_openai(payload: Dict[str, Any]) -> str:
-	if not OPENAI_API_KEY or not openai:
+def summarize_with_gemini(payload: Dict[str, Any]) -> str:
+	if not model:
 		return ''
 	try:
 		prompt = (
 			"You are a travel planner. Given the JSON payload, output a short bullet summary of the itinerary focusing on reasoning for day splits and ordering.\n" 
 			f"JSON:\n{json.dumps(payload)[:6000]}\n"
 		)
-		resp = openai.ChatCompletion.create(
-			model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
-			messages=[{"role": "user", "content": prompt}],
-			max_tokens=250,
-		)
-		return resp.choices[0].message['content']  # type: ignore
+		response = model.generate_content(prompt)
+		return response.text
 	except Exception:
 		return ''
 
@@ -342,7 +349,7 @@ def generate():
 		transport_options
 	)
 
-	summary = summarize_with_openai({
+	summary = summarize_with_gemini({
 		"duration_days": duration,
 		"max_travelers": max_travelers,
 		"attractions": n_attractions,
@@ -413,5 +420,83 @@ def generate():
 	})
 
 
+import re
+
+# ... (imports unchanged)
+
+# ... (existing functions unchanged)
+
+def rule_based_chat(message: str, context: Dict[str, Any]) -> str:
+	"""A simple rule-based chatbot for offline mode."""
+	msg = message.lower()
+	
+	# helper to extract potential location names (very basic)
+	def extract_locations(text):
+		words = text.title().split()
+		return [w for w in words if w not in ['From', 'To', 'In', 'And', 'The', 'A', 'Is', 'How', 'Far']]
+
+	# 1. Greetings
+	if re.search(r'\b(hi|hello|hey|greetings)\b', msg):
+		return "Hi there! I'm your TravelEase companion. I can help you with distance calculations, itinerary tips, and pricing estimates!"
+
+	# 2. Distance queries
+	if 'distance' in msg or 'far' in msg:
+		# If context has a destination, use it
+		dest = context.get('destination')
+		if dest:
+			return f"I can definitely calculate distances to {dest}! Just let me know where you're starting from."
+		return "I can calculate distances between cities! For example, ask me 'How far is it from Kochi to Munnar?'"
+
+	# 3. Pricing/Budget
+	if any(w in msg for w in ['price', 'cost', 'budget', 'expensive', 'cheap']):
+		return "Our pricing is dynamic! We estimate around ₹600-2000 per person/day depending on your choice of hotels and transport. Group discounts apply for 4+ travelers!"
+
+	# 4. Itinerary/Planning
+	if any(w in msg for w in ['plan', 'itinerary', 'recommend', 'suggestion']):
+		dest = context.get('destination', 'your dream destination')
+		return f"I can generate a fully customized day-by-day itinerary for {dest}. Just go to the packages section and click 'Generate Itinerary'!"
+
+	# 5. Food
+	if any(w in msg for w in ['food', 'restaurant', 'eat', 'dinner', 'lunch']):
+		return "I love food! I usually recommend trying local delicacies. My itinerary generator automatically picks highly-rated restaurants near your attractions."
+
+	# 6. Default fallback
+	return "I'm currently in offline mode, but I'm listening! You can ask me about distances, pricing, or how to plan your trip."
+
+
+@app.route('/chat', methods=['POST'])
+def chat():
+	data = request.get_json(silent=True) or {}
+	message = data.get('message', '')
+	context = data.get('context', {}) # Optional context about current trip
+	
+	if not message:
+		return jsonify({"response": "I didn't catch that. Could you say it again?"})
+
+	# Try Gemini first (if configured), fallback to rule-based immediately on error
+	if model:
+		try:
+			# Construct prompt for Gemini
+			prompt = f"""You are an enthusiastic AI Travel Companion for the TravelEase Hub app. Keep responses concise (under 50 words) and helpful.
+			
+			Context: {f"The user is interested in {context.get('destination')}." if context.get('destination') else ""}
+			
+			User: {message}
+			"""
+			
+			response = model.generate_content(prompt)
+			return jsonify({"response": response.text})
+		except Exception as e:
+			print(f"Gemini Error (falling back to offline): {e}")
+			# Fallback continues below
+			pass
+		except Exception as e:  # Catch other errors
+			pass
+	
+	# Fallback response
+	response = rule_based_chat(message, context)
+	return jsonify({"response": response})
+
+
 if __name__ == '__main__':
-	app.run(host='0.0.0.0', port=PORT)
+    app.run(host='0.0.0.0', port=PORT)

@@ -29,10 +29,10 @@ const createRateLimit = (windowMs, max, message) => {
 // Generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
-    { 
-      id: user.id, 
+    {
+      id: user.id,
       email: user.email,
-      userType: user.user_type 
+      userType: user.user_type
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -83,7 +83,7 @@ const signupHandler = async (req, res) => {
 
     // Check if user already exists in users table
     const { data: existingUser } = await supabase
-      .from('users')
+      .from('profiles')
       .select('email')
       .eq('email', email.toLowerCase())
       .single();
@@ -113,7 +113,7 @@ const signupHandler = async (req, res) => {
     // Generate 6-digit OTP
     const otp = generateOTP();
     const otpHash = await hashOTP(otp);
-    
+
     // Hash password
     const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -245,7 +245,7 @@ router.post('/login', [
 
     // Find user by email
     const { data: user, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('id, full_name, email, password_hash, email_verified, verified, user_type')
       .eq('email', email.toLowerCase())
       .single();
@@ -344,7 +344,7 @@ router.post('/verify-email', [
     if (pendingUser.locked_until) {
       const lockTime = new Date(pendingUser.locked_until);
       const now = new Date();
-      
+
       if (now < lockTime) {
         const minutesLeft = Math.ceil((lockTime - now) / (1000 * 60));
         return res.status(423).json({
@@ -358,19 +358,19 @@ router.post('/verify-email', [
         // Lock has expired, reset attempts
         await supabase
           .from('pending_users')
-          .update({ 
+          .update({
             otp_attempts: 0,
-            locked_until: null 
+            locked_until: null
           })
           .eq('email', email.toLowerCase());
-        
+
         // Refresh user data
         const { data: refreshedUser } = await supabase
           .from('pending_users')
           .select('*')
           .eq('email', email.toLowerCase())
           .single();
-        
+
         if (refreshedUser) {
           pendingUser.otp_attempts = refreshedUser.otp_attempts;
           pendingUser.locked_until = refreshedUser.locked_until;
@@ -398,17 +398,17 @@ router.post('/verify-email', [
     if (!isValidOTP) {
       const newAttempts = (pendingUser.otp_attempts || 0) + 1;
       const maxAttempts = pendingUser.max_attempts || parseInt(process.env.OTP_MAX_ATTEMPTS) || 5;
-      
+
       // Check if max attempts reached
       if (newAttempts >= maxAttempts) {
         // Lock account for 15 minutes
         const lockoutDuration = parseInt(process.env.OTP_LOCKOUT_DURATION_MINUTES) || 15;
         const lockedUntil = new Date();
         lockedUntil.setMinutes(lockedUntil.getMinutes() + lockoutDuration);
-        
+
         await supabase
           .from('pending_users')
-          .update({ 
+          .update({
             otp_attempts: newAttempts,
             locked_until: lockedUntil.toISOString()
           })
@@ -441,7 +441,7 @@ router.post('/verify-email', [
 
     // Create user in users table with verified=true
     const { data: newUser, error: createError } = await supabase
-      .from('users')
+      .from('profiles')
       .insert({
         email: pendingUser.email,
         full_name: pendingUser.full_name,
@@ -536,7 +536,7 @@ router.post('/resend-otp', resendOTPLimit, [
     // Generate new OTP
     const otp = generateOTP();
     const otpHash = await hashOTP(otp);
-    
+
     // Set new expiry (5 minutes)
     const expiryMinutes = parseInt(process.env.OTP_EXPIRY_MINUTES) || 5;
     const expiresAt = getOTPExpiry(expiryMinutes);
@@ -593,7 +593,7 @@ router.get('/google/callback',
   (req, res) => {
     // Generate JWT token for Google user
     const token = generateToken(req.user);
-    
+
     // Redirect to frontend with token
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}?token=${token}&auth=success`);
@@ -604,9 +604,9 @@ router.get('/google/callback',
 router.get('/verify', verifyToken, async (req, res) => {
   try {
     const supabase = getSupabase();
-    
+
     const { data: user, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('id, full_name, email, email_verified, user_type')
       .eq('id', req.user.id)
       .single();
@@ -660,7 +660,7 @@ router.post('/forgot-password', [
 
     // Check if user exists
     const { data: user, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('id, email, full_name')
       .eq('email', email.toLowerCase())
       .single();
@@ -676,10 +676,10 @@ router.post('/forgot-password', [
       try {
         const { createPasswordResetToken } = require('../utils/passwordReset');
         const { sendPasswordResetEmail } = require('../utils/emailService');
-        
+
         // Create password reset token
         const resetToken = await createPasswordResetToken(user.id);
-        
+
         if (resetToken) {
           // Send password reset email
           await sendPasswordResetEmail(user.email, user.full_name, resetToken);
@@ -719,9 +719,9 @@ router.post('/verify-reset-token', [
 
     const { token } = req.body;
     const { verifyResetToken } = require('../utils/passwordReset');
-    
+
     const result = await verifyResetToken(token);
-    
+
     if (!result.success) {
       return res.status(400).json({
         success: false,
@@ -804,10 +804,10 @@ router.post('/reset-password', [
 
     const { token, password } = req.body;
     const { verifyResetToken, markTokenAsUsed } = require('../utils/passwordReset');
-    
+
     // Verify token
     const result = await verifyResetToken(token);
-    
+
     if (!result.success) {
       return res.status(400).json({
         success: false,
@@ -823,7 +823,7 @@ router.post('/reset-password', [
 
     // Update password
     const { error: updateError } = await supabase
-      .from('users')
+      .from('profiles')
       .update({ password_hash: hashedPassword })
       .eq('id', result.userId);
 
@@ -872,7 +872,7 @@ if (process.env.NODE_ENV !== 'production') {
 
       // Find user id
       const { data: user, error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('id')
         .eq('email', email.toLowerCase())
         .single();
@@ -915,22 +915,22 @@ router.get('/google', passport.authenticate('google', {
 }));
 
 // Google OAuth callback
-router.get('/google/callback', 
-  passport.authenticate('google', { 
+router.get('/google/callback',
+  passport.authenticate('google', {
     failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
-    session: false 
+    session: false
   }),
   async (req, res) => {
     try {
       // Generate JWT token for the authenticated user
       const token = generateToken(req.user);
-      
+
       // Send registration success email for new users (if not already sent)
       if (req.user.created_at) {
         const createdTime = new Date(req.user.created_at);
         const now = new Date();
         const timeDiff = now - createdTime;
-        
+
         // If user was created in the last 5 minutes, they're likely new
         if (timeDiff < 5 * 60 * 1000) {
           try {
@@ -950,7 +950,7 @@ router.get('/google/callback',
         emailVerified: true,
         userType: req.user.user_type
       }))}`;
-      
+
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google OAuth callback error:', error);
